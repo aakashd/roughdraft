@@ -35,7 +35,9 @@ function getRawPathFromLocation(): string | null {
   const normalizedPathname = normalizePathSeparators(window.location.pathname);
   if (normalizedPathname !== "/" && !normalizedPathname.startsWith("/api")) {
     const decodedPathname = decodeURIComponent(normalizedPathname);
-    return decodedPathname.startsWith("/") ? decodedPathname : `/${decodedPathname}`;
+    return decodedPathname.startsWith("/")
+      ? decodedPathname
+      : `/${decodedPathname}`;
   }
 
   return null;
@@ -52,8 +54,12 @@ function getRequestedPathState(): RequestedPathState {
     return { rawPath, projectPath: rawPath, documentPath: null };
   }
 
-  const lastSlashIndex = Math.max(normalizedPath.lastIndexOf("/"), normalizedPath.lastIndexOf("\\"));
-  const projectPath = lastSlashIndex >= 0 ? rawPath.slice(0, lastSlashIndex) || "/" : ".";
+  const lastSlashIndex = Math.max(
+    normalizedPath.lastIndexOf("/"),
+    normalizedPath.lastIndexOf("\\"),
+  );
+  const projectPath =
+    lastSlashIndex >= 0 ? rawPath.slice(0, lastSlashIndex) || "/" : ".";
   const documentPath = rawPath.slice(lastSlashIndex + 1);
 
   return { rawPath, projectPath, documentPath };
@@ -68,8 +74,13 @@ function formatWorkspacePathForDisplay(path?: string | null) {
   if (!value) return null;
 
   const normalizedPath = normalizePathSeparators(value);
-  const collapsedHomePath = normalizedPath.replace(/^\/Users\/[^/]+(?=\/|$)/, "~");
-  return value.includes("\\") ? collapsedHomePath.replace(/\//g, "\\") : collapsedHomePath;
+  const collapsedHomePath = normalizedPath.replace(
+    /^\/Users\/[^/]+(?=\/|$)/,
+    "~",
+  );
+  return value.includes("\\")
+    ? collapsedHomePath.replace(/\//g, "\\")
+    : collapsedHomePath;
 }
 
 function getWorkspaceName(path?: string) {
@@ -117,7 +128,10 @@ function joinPath(basePath: string, relativePath: string) {
   return relativePath
     .split("/")
     .filter(Boolean)
-    .reduce((result, segment) => `${result}${separator}${segment}`, normalizedBasePath);
+    .reduce(
+      (result, segment) => `${result}${separator}${segment}`,
+      normalizedBasePath,
+    );
 }
 
 function getCanvasPageId(relativePath: string) {
@@ -135,7 +149,7 @@ function getContainingPath(pathValue: string) {
 
   const lastSeparatorIndex = Math.max(
     normalizedPath.lastIndexOf("/"),
-    normalizedPath.lastIndexOf("\\")
+    normalizedPath.lastIndexOf("\\"),
   );
 
   if (lastSeparatorIndex < 0) return ".";
@@ -155,18 +169,22 @@ function getOpenedFolderPath(pathValue: string) {
 function getDocumentNavigationState(
   projectPath: string,
   relativePath: string,
-  currentRawPath: string | null
+  currentRawPath: string | null,
 ): RequestedPathState {
   const relativeFolderPath = getContainingPath(relativePath);
   const nextFolderPath =
-    relativeFolderPath === "." ? projectPath : joinPath(projectPath, relativeFolderPath);
+    relativeFolderPath === "."
+      ? projectPath
+      : joinPath(projectPath, relativeFolderPath);
   const shouldPreserveUrl =
     !!currentRawPath &&
     normalizePathSeparators(getOpenedFolderPath(currentRawPath)) ===
       normalizePathSeparators(nextFolderPath);
 
   return {
-    rawPath: shouldPreserveUrl ? currentRawPath : joinPath(projectPath, relativePath),
+    rawPath: shouldPreserveUrl
+      ? currentRawPath
+      : joinPath(projectPath, relativePath),
     projectPath,
     documentPath: relativePath,
   };
@@ -209,25 +227,28 @@ function syncRequestedPathInUrl(path?: string | null) {
 }
 
 export function App() {
-  const [requestedPathState, setRequestedPathState] = useState<RequestedPathState>(
-    getRequestedPathState()
-  );
+  const [requestedPathState, setRequestedPathState] =
+    useState<RequestedPathState>(getRequestedPathState());
   const [backend, setBackend] = useState<StorageBackend | null>(null);
   const [allPages, setAllPages] = useState<Page[]>([]);
   const [pages, setPages] = useState<Page[]>([]);
   const [documentPage, setDocumentPage] = useState<Page | null>(null);
   const [activeDocumentPath, setActiveDocumentPath] = useState<string | null>(
-    requestedPathState.documentPath
+    requestedPathState.documentPath,
   );
   const [viewMode, setViewMode] = useState<ViewMode>(
-    requestedPathState.documentPath ? "document" : "canvas"
+    requestedPathState.documentPath ? "document" : "canvas",
   );
   const [layout, setLayout] = useState<ProjectLayout>({ pages: {} });
   const [pathSwitcherDismissCount, setPathSwitcherDismissCount] = useState(0);
   const [selectedId, setSelectedId] = useState<string | null>(null);
-  const [canvasRevealRequest, setCanvasRevealRequest] = useState<CanvasRevealRequest | null>(null);
-  const [documentSaveState, setDocumentSaveState] = useState<"idle" | "saving" | "error">("idle");
-  const [documentToolbarHost, setDocumentToolbarHost] = useState<HTMLDivElement | null>(null);
+  const [canvasRevealRequest, setCanvasRevealRequest] =
+    useState<CanvasRevealRequest | null>(null);
+  const [documentSaveState, setDocumentSaveState] = useState<
+    "idle" | "saving" | "error"
+  >("idle");
+  const [documentToolbarHost, setDocumentToolbarHost] =
+    useState<HTMLDivElement | null>(null);
   const [projectTreeVersion, setProjectTreeVersion] = useState(0);
   const [loading, setLoading] = useState(true);
   const backendRef = useRef<StorageBackend | null>(null);
@@ -254,7 +275,7 @@ export function App() {
     if (pageList.length === 0) {
       const page = await nextBackend.createPage(
         "Untitled",
-        "# Welcome to Roughdraft\n\nStart writing. Your work is saved automatically.\n"
+        "# Welcome to Roughdraft\n\nStart writing. Your work is saved automatically.\n",
       );
       pg = [page];
       proj = await nextBackend.getProject();
@@ -285,12 +306,15 @@ export function App() {
     setLayout(proj);
   }, []);
 
-  const loadDocument = useCallback(async (nextBackend: StorageBackend, relativePath: string) => {
-    const nextDocument = await nextBackend.getMarkdownFile(relativePath);
-    setDocumentPage(nextDocument);
-    setActiveDocumentPath(relativePath);
-    return nextDocument;
-  }, []);
+  const loadDocument = useCallback(
+    async (nextBackend: StorageBackend, relativePath: string) => {
+      const nextDocument = await nextBackend.getMarkdownFile(relativePath);
+      setDocumentPage(nextDocument);
+      setActiveDocumentPath(relativePath);
+      return nextDocument;
+    },
+    [],
+  );
 
   useEffect(() => {
     let cancelled = false;
@@ -303,7 +327,8 @@ export function App() {
         const requestedProjectPath = requestedPathState.projectPath;
         if (
           requestedProjectPath &&
-          requestedProjectPath !== getWorkspacePath(detectedBackend.info.projectPath)
+          requestedProjectPath !==
+            getWorkspacePath(detectedBackend.info.projectPath)
         ) {
           try {
             await detectedBackend.openProject(requestedProjectPath);
@@ -323,7 +348,10 @@ export function App() {
       await loadProject(detectedBackend);
 
       if (requestedPathState.documentPath) {
-        const nextDocument = await loadDocument(detectedBackend, requestedPathState.documentPath);
+        const nextDocument = await loadDocument(
+          detectedBackend,
+          requestedPathState.documentPath,
+        );
         setSelectedId(nextDocument.id);
       } else {
         setDocumentPage(null);
@@ -339,7 +367,13 @@ export function App() {
     return () => {
       cancelled = true;
     };
-  }, [loadDocument, loadProject, requestedPathState.documentPath, requestedPathState.projectPath, requestedPathState.rawPath]);
+  }, [
+    loadDocument,
+    loadProject,
+    requestedPathState.documentPath,
+    requestedPathState.projectPath,
+    requestedPathState.rawPath,
+  ]);
 
   const handleSavePage = useCallback(async (id: string, content: string) => {
     await backendRef.current?.savePage(id, content);
@@ -353,28 +387,37 @@ export function App() {
     setAllPages((prev) => prev.map(updatePage));
   }, []);
 
-  const handleSaveDocument = useCallback(async (id: string, content: string) => {
-    if (!activeDocumentPath) return;
-    await backendRef.current?.saveMarkdownFile(activeDocumentPath, content);
+  const handleSaveDocument = useCallback(
+    async (id: string, content: string) => {
+      if (!activeDocumentPath) return;
+      await backendRef.current?.saveMarkdownFile(activeDocumentPath, content);
 
-    const firstLine = content.split("\n")[0] || "";
-    const fallbackTitle = id.split("/").at(-1) || id;
-    const title = firstLine.replace(/^#*\s*/, "") || fallbackTitle;
+      const firstLine = content.split("\n")[0] || "";
+      const fallbackTitle = id.split("/").at(-1) || id;
+      const title = firstLine.replace(/^#*\s*/, "") || fallbackTitle;
 
-    setDocumentPage((prev) =>
-      prev && prev.id === id
-        ? {
-            ...prev,
-            content,
-            title,
-          }
-        : prev
-    );
-    setPages((prev) => prev.map((page) => (page.id === id ? { ...page, content, title } : page)));
-    setAllPages((prev) =>
-      prev.map((page) => (page.id === id ? { ...page, content, title } : page))
-    );
-  }, [activeDocumentPath]);
+      setDocumentPage((prev) =>
+        prev && prev.id === id
+          ? {
+              ...prev,
+              content,
+              title,
+            }
+          : prev,
+      );
+      setPages((prev) =>
+        prev.map((page) =>
+          page.id === id ? { ...page, content, title } : page,
+        ),
+      );
+      setAllPages((prev) =>
+        prev.map((page) =>
+          page.id === id ? { ...page, content, title } : page,
+        ),
+      );
+    },
+    [activeDocumentPath],
+  );
 
   const handleReposition = useCallback((id: string, x: number, y: number) => {
     setLayout((prev) => {
@@ -395,7 +438,10 @@ export function App() {
 
   const handleCreatePage = useCallback(async () => {
     if (!backendRef.current) return;
-    const page = await backendRef.current.createPage("Untitled", "# Untitled\n");
+    const page = await backendRef.current.createPage(
+      "Untitled",
+      "# Untitled\n",
+    );
     const proj = await backendRef.current.getProject();
     setAllPages((prev) => [...prev, page]);
     setPages((prev) => [...prev, page]);
@@ -405,7 +451,8 @@ export function App() {
 
     if (viewMode !== "document") return;
 
-    const projectPath = backendRef.current.info.projectPath ?? requestedPathState.projectPath;
+    const projectPath =
+      backendRef.current.info.projectPath ?? requestedPathState.projectPath;
     const relativePath = `${page.id}.md`;
 
     setDocumentPage(page);
@@ -418,7 +465,7 @@ export function App() {
     const nextPathState = getDocumentNavigationState(
       projectPath,
       relativePath,
-      requestedPathState.rawPath
+      requestedPathState.rawPath,
     );
     setRequestedPathState(nextPathState);
     syncRequestedPathInUrl(nextPathState.rawPath);
@@ -438,7 +485,7 @@ export function App() {
       if (selectedId === id) setSelectedId(null);
       setProjectTreeVersion((version) => version + 1);
     },
-    [selectedId]
+    [selectedId],
   );
 
   const handleCanvasPointerDown = useCallback(() => {
@@ -450,15 +497,19 @@ export function App() {
     async (relativePath: string) => {
       if (!backendRef.current) return;
 
-      const projectPath = backendRef.current.info.projectPath ?? requestedPathState.projectPath;
+      const projectPath =
+        backendRef.current.info.projectPath ?? requestedPathState.projectPath;
       if (!projectPath) return;
 
       try {
-        const nextDocument = await loadDocument(backendRef.current, relativePath);
+        const nextDocument = await loadDocument(
+          backendRef.current,
+          relativePath,
+        );
         const nextPathState = getDocumentNavigationState(
           projectPath,
           relativePath,
-          requestedPathState.rawPath
+          requestedPathState.rawPath,
         );
         setRequestedPathState(nextPathState);
         syncRequestedPathInUrl(nextPathState.rawPath);
@@ -470,7 +521,7 @@ export function App() {
 
       setPathSwitcherDismissCount((count) => count + 1);
     },
-    [loadDocument, requestedPathState.projectPath, requestedPathState.rawPath]
+    [loadDocument, requestedPathState.projectPath, requestedPathState.rawPath],
   );
 
   const revealMarkdownPageOnCanvas = useCallback(
@@ -481,7 +532,8 @@ export function App() {
       const targetPage = allPages.find((page) => page.id === pageId);
       if (!targetPage) return false;
 
-      const projectPath = backendRef.current?.info.projectPath ?? requestedPathState.projectPath;
+      const projectPath =
+        backendRef.current?.info.projectPath ?? requestedPathState.projectPath;
       if (!projectPath) return false;
 
       setRequestedPathState({
@@ -498,7 +550,7 @@ export function App() {
       setPathSwitcherDismissCount((count) => count + 1);
       return true;
     },
-    [allPages, requestedPathState.projectPath]
+    [allPages, requestedPathState.projectPath],
   );
 
   const handleOpenMarkdownPage = useCallback(
@@ -510,7 +562,7 @@ export function App() {
 
       revealMarkdownPageOnCanvas(relativePath);
     },
-    [openDocumentInRegularMode, revealMarkdownPageOnCanvas, viewMode]
+    [openDocumentInRegularMode, revealMarkdownPageOnCanvas, viewMode],
   );
 
   const handleViewModeChange = useCallback(
@@ -520,7 +572,9 @@ export function App() {
       setViewMode(nextMode);
 
       if (nextMode === "canvas") {
-        const projectPath = backendRef.current?.info.projectPath ?? requestedPathState.projectPath;
+        const projectPath =
+          backendRef.current?.info.projectPath ??
+          requestedPathState.projectPath;
         if (!projectPath) return;
 
         setRequestedPathState({
@@ -530,7 +584,10 @@ export function App() {
         });
         syncProjectPathInUrl(projectPath);
 
-        if (activeDocumentPath && revealMarkdownPageOnCanvas(activeDocumentPath)) {
+        if (
+          activeDocumentPath &&
+          revealMarkdownPageOnCanvas(activeDocumentPath)
+        ) {
           return;
         }
 
@@ -562,7 +619,7 @@ export function App() {
       revealMarkdownPageOnCanvas,
       selectedId,
       viewMode,
-    ]
+    ],
   );
 
   if (loading) {
@@ -578,20 +635,24 @@ export function App() {
       ? joinPath(backend.info.projectPath, activeDocumentPath)
       : requestedPathState.rawPath;
   const displayPath =
-    viewMode === "document" && documentPage ? documentAbsolutePath : backend?.info.projectPath;
+    viewMode === "document" && documentPage
+      ? documentAbsolutePath
+      : backend?.info.projectPath;
   const workspaceName = getWorkspaceName(displayPath ?? undefined);
   const isDocumentMode = viewMode === "document";
   const workspacePath =
-    getWorkspacePath(backend?.info.projectPath ?? requestedPathState.projectPath ?? undefined) ??
-    "Browser drafts";
-  const workspacePathLabel = formatWorkspacePathForDisplay(workspacePath) ?? workspacePath;
+    getWorkspacePath(
+      backend?.info.projectPath ?? requestedPathState.projectPath ?? undefined,
+    ) ?? "Browser drafts";
+  const workspacePathLabel =
+    formatWorkspacePathForDisplay(workspacePath) ?? workspacePath;
   const selectedCanvasPath =
     selectedId && backend?.info.projectPath
       ? joinPath(backend.info.projectPath, `${selectedId}.md`)
       : null;
   const treeCurrentPath = isDocumentMode
     ? documentAbsolutePath
-    : selectedCanvasPath ?? backend?.info.projectPath ?? displayPath;
+    : (selectedCanvasPath ?? backend?.info.projectPath ?? displayPath);
   const firstPage = pages[0];
   const firstPageLayout = firstPage ? layout.pages[firstPage.id] : null;
   const firstPageFrame = firstPage
@@ -609,7 +670,9 @@ export function App() {
       }
     : null;
   const initialWorldCenterKey = `${displayPath ?? "browser"}:${firstPage?.id ?? "none"}`;
-  const revealedPageLayout = canvasRevealRequest ? layout.pages[canvasRevealRequest.pageId] : null;
+  const revealedPageLayout = canvasRevealRequest
+    ? layout.pages[canvasRevealRequest.pageId]
+    : null;
   const revealedPage = canvasRevealRequest
     ? pages.find((page) => page.id === canvasRevealRequest.pageId)
     : null;
@@ -623,7 +686,8 @@ export function App() {
         }
       : null;
   const projectLabel = getPathLeaf(backend?.info.projectPath) ?? workspaceName;
-  const documentName = getPathLeaf(activeDocumentPath) ?? documentPage?.title ?? "Untitled";
+  const documentName =
+    getPathLeaf(activeDocumentPath) ?? documentPage?.title ?? "Untitled";
   const documentSaveStateClass =
     documentSaveState === "error"
       ? "text-rose-600"
@@ -632,15 +696,17 @@ export function App() {
         : "text-emerald-700";
 
   return (
-    <div
-      className="flex h-screen overflow-hidden bg-white text-slate-950"
-    >
+    <div className="flex h-screen overflow-hidden bg-white text-slate-950">
       <aside
         className={`flex h-full w-[320px] max-w-[34vw] min-w-[280px] shrink-0 flex-col border-r ${
-          isDocumentMode ? "border-slate-200 bg-white" : "border-slate-200/80 bg-white"
+          isDocumentMode
+            ? "border-slate-200 bg-white"
+            : "border-slate-200/80 bg-white"
         }`}
       >
-        <div className={`border-b px-4 pt-5 pb-4 ${isDocumentMode ? "border-slate-200" : "border-slate-200/80"}`}>
+        <div
+          className={`border-b px-4 pt-5 pb-4 ${isDocumentMode ? "border-slate-200" : "border-slate-200/80"}`}
+        >
           {backend ? (
             <PathSwitcher
               backend={backend}
@@ -656,7 +722,9 @@ export function App() {
               <div className="truncate text-[0.95rem] font-semibold tracking-[-0.02em] text-slate-950">
                 {projectLabel}
               </div>
-              <div className="mt-1 truncate text-[0.74rem] text-slate-500">{workspacePathLabel}</div>
+              <div className="mt-1 truncate text-[0.74rem] text-slate-500">
+                {workspacePathLabel}
+              </div>
             </div>
           )}
 
@@ -720,9 +788,7 @@ export function App() {
       </aside>
 
       <main className="min-w-0 flex-1 overflow-hidden">
-        <div
-          className="flex h-full flex-col overflow-hidden bg-white"
-        >
+        <div className="flex h-full flex-col overflow-hidden bg-white">
           {isDocumentMode ? (
             <>
               <div className="border-b border-slate-200 bg-white/90 px-8 py-3 backdrop-blur">
@@ -732,7 +798,8 @@ export function App() {
                       <div className="truncate text-[0.95rem] font-medium text-slate-900">
                         {documentName}
                       </div>
-                      {activeDocumentPath && activeDocumentPath !== documentName ? (
+                      {activeDocumentPath &&
+                      activeDocumentPath !== documentName ? (
                         <div className="truncate text-[0.78rem] text-slate-500">
                           {activeDocumentPath}
                         </div>
@@ -744,7 +811,10 @@ export function App() {
                       {getSaveStateLabel(documentSaveState)}
                     </div>
                   </div>
-                  <div ref={setDocumentToolbarHost} className="min-h-11 min-w-0" />
+                  <div
+                    ref={setDocumentToolbarHost}
+                    className="min-h-11 min-w-0"
+                  />
                 </div>
               </div>
               <div className="min-h-0 flex-1 overflow-y-auto px-8 py-8 sm:px-12">
@@ -787,7 +857,9 @@ export function App() {
                     y={pos.y}
                     selected={selectedId === page.id}
                     focusRequestKey={
-                      canvasRevealRequest?.pageId === page.id ? canvasRevealRequest.key : null
+                      canvasRevealRequest?.pageId === page.id
+                        ? canvasRevealRequest.key
+                        : null
                     }
                     canDelete
                     onSelect={setSelectedId}

@@ -193,7 +193,7 @@ export function EditorContextMenu({
           .insertContent(
             toHtml(text, {
               resolveFileUrl: (path) => backend.resolveFileUrl(path),
-            })
+            }),
           )
           .run();
       }
