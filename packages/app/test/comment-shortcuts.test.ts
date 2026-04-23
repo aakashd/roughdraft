@@ -25,8 +25,8 @@ describe("comment shortcuts", () => {
           metaKey: true,
           shiftKey: false,
         },
-        "MacIntel"
-      )
+        "MacIntel",
+      ),
     ).toBe(true);
   });
 
@@ -40,8 +40,8 @@ describe("comment shortcuts", () => {
           metaKey: false,
           shiftKey: false,
         },
-        "Win32"
-      )
+        "Win32",
+      ),
     ).toBe(true);
   });
 
@@ -55,8 +55,8 @@ describe("comment shortcuts", () => {
           metaKey: false,
           shiftKey: false,
         },
-        "Win32"
-      )
+        "Win32",
+      ),
     ).toBe(false);
 
     expect(
@@ -68,8 +68,8 @@ describe("comment shortcuts", () => {
           metaKey: true,
           shiftKey: false,
         },
-        "MacIntel"
-      )
+        "MacIntel",
+      ),
     ).toBe(false);
   });
 });

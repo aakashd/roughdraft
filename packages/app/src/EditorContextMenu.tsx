@@ -33,7 +33,9 @@ function getNavigatorPlatform() {
     };
   };
 
-  return navigatorWithUserAgentData.userAgentData?.platform ?? navigator.platform;
+  return (
+    navigatorWithUserAgentData.userAgentData?.platform ?? navigator.platform
+  );
 }
 
 export function EditorContextMenu({
@@ -54,7 +56,12 @@ export function EditorContextMenu({
   }, []);
 
   const updateSelectionActionPosition = useCallback(() => {
-    if (!editor || !onAddComment || !editor.isFocused || editor.state.selection.empty) {
+    if (
+      !editor ||
+      !onAddComment ||
+      !editor.isFocused ||
+      editor.state.selection.empty
+    ) {
       setSelectionActionPosition(null);
       return;
     }
@@ -62,7 +69,12 @@ export function EditorContextMenu({
     const container = containerRef.current;
     const selection = window.getSelection();
 
-    if (!container || !selection || selection.rangeCount === 0 || selection.isCollapsed) {
+    if (
+      !container ||
+      !selection ||
+      selection.rangeCount === 0 ||
+      selection.isCollapsed
+    ) {
       setSelectionActionPosition(null);
       return;
     }
@@ -85,7 +97,8 @@ export function EditorContextMenu({
     }
 
     const containerRect = container.getBoundingClientRect();
-    const nextLeft = boundingRect.left + boundingRect.width / 2 - containerRect.left;
+    const nextLeft =
+      boundingRect.left + boundingRect.width / 2 - containerRect.left;
     const nextTop = boundingRect.top - containerRect.top - 10;
 
     setSelectionActionPosition({
@@ -253,7 +266,9 @@ export function EditorContextMenu({
             }}
           >
             <span>Add comment</span>
-            <span className="text-[11px] font-medium text-slate-400">{shortcutLabel}</span>
+            <span className="text-[11px] font-medium text-slate-400">
+              {shortcutLabel}
+            </span>
           </button>
           <button
             type="button"

@@ -105,7 +105,7 @@ function findCommentRange(editor: Editor | null, commentId: string) {
       (mark) =>
         mark.type === commentMarkType &&
         Array.isArray(mark.attrs.commentIds) &&
-        mark.attrs.commentIds.includes(commentId)
+        mark.attrs.commentIds.includes(commentId),
     );
 
     if (!hasCommentId) {
@@ -138,12 +138,14 @@ function findCommentAnchorElement(editor: Editor | null, commentId: string) {
   if (!editor) return null;
 
   const anchors = editor.view.dom.querySelectorAll<HTMLElement>(
-    ".comment-anchor[data-comment-ids]"
+    ".comment-anchor[data-comment-ids]",
   );
 
-  return [...anchors].find((anchor) =>
-    parseCommentIds(anchor.dataset.commentIds).includes(commentId)
-  ) ?? null;
+  return (
+    [...anchors].find((anchor) =>
+      parseCommentIds(anchor.dataset.commentIds).includes(commentId),
+    ) ?? null
+  );
 }
 
 export function PageCard({
@@ -171,14 +173,18 @@ export function PageCard({
   const lastFocusRequestKeyRef = useRef<string | null>(null);
   const selectedCommentIdRef = useRef<string | null>(null);
   const scale = useCanvasScale();
-  const [saveState, setSaveState] = useState<"idle" | "saving" | "error">("idle");
+  const [saveState, setSaveState] = useState<"idle" | "saving" | "error">(
+    "idle",
+  );
   const [activeCommentIds, setActiveCommentIds] = useState<string[]>([]);
-  const [selectedCommentId, setSelectedCommentId] = useState<string | null>(null);
+  const [selectedCommentId, setSelectedCommentId] = useState<string | null>(
+    null,
+  );
   const [hoveredCommentId, setHoveredCommentId] = useState<string | null>(null);
 
   const resolveFileUrl = useCallback(
     (path: string) => backend.resolveFileUrl(path),
-    [backend]
+    [backend],
   );
 
   const parsedContent = useMemo(
@@ -186,10 +192,10 @@ export function PageCard({
       criticMarkdownToEditorState(page.content, {
         resolveFileUrl,
       }),
-    [page.content, resolveFileUrl]
+    [page.content, resolveFileUrl],
   );
   const [comments, setComments] = useState<Map<string, CriticComment>>(
-    () => parsedContent.comments
+    () => parsedContent.comments,
   );
 
   useEffect(() => {
@@ -205,7 +211,7 @@ export function PageCard({
 
       const markdown = editorStateToCriticMarkdown(
         currentDoc,
-        nextComments ?? commentsRef.current
+        nextComments ?? commentsRef.current,
       );
 
       recentMarkdownRef.current.add(markdown);
@@ -226,7 +232,7 @@ export function PageCard({
         }
       }, 500);
     },
-    [onSave, page.id]
+    [onSave, page.id],
   );
 
   const insertFiles = useCallback(
@@ -234,7 +240,9 @@ export function PageCard({
       const currentEditor = editorRef.current;
       if (!currentEditor || files.length === 0) return;
 
-      const assets = await Promise.all(files.map((file) => backend.saveAsset(file)));
+      const assets = await Promise.all(
+        files.map((file) => backend.saveAsset(file)),
+      );
       const markdown = assets
         .map((asset, index) => {
           const file = files[index];
@@ -251,11 +259,11 @@ export function PageCard({
         .insertContent(
           toHtml(markdown, {
             resolveFileUrl,
-          })
+          }),
         )
         .run();
     },
-    [backend, resolveFileUrl]
+    [backend, resolveFileUrl],
   );
 
   const editor = useEditor(
@@ -292,19 +300,17 @@ export function PageCard({
         const nextActiveCommentIds = getSelectionCommentIds(currentEditor);
         setActiveCommentIds(nextActiveCommentIds);
         setSelectedCommentId((current) =>
-          getPreferredCommentId(nextActiveCommentIds, current)
+          getPreferredCommentId(nextActiveCommentIds, current),
         );
       },
     },
-    [page.id]
+    [page.id],
   );
 
   editorRef.current = editor;
   selectedCommentIdRef.current = selectedCommentId;
-  const { commentGroups, contentHeight, measureLayout } = useCommentAnchorLayout(
-    editor,
-    true
-  );
+  const { commentGroups, contentHeight, measureLayout } =
+    useCommentAnchorLayout(editor, true);
 
   useEffect(() => {
     if (!editor) return;
@@ -362,14 +368,15 @@ export function PageCard({
     if (!editor) return;
 
     const anchorElements = editor.view.dom.querySelectorAll<HTMLElement>(
-      ".comment-anchor[data-comment-ids]"
+      ".comment-anchor[data-comment-ids]",
     );
 
     for (const anchor of anchorElements) {
       const commentIds = parseCommentIds(anchor.dataset.commentIds);
       const isSelected =
         !!selectedCommentId && commentIds.includes(selectedCommentId);
-      const isHovered = !!hoveredCommentId && commentIds.includes(hoveredCommentId);
+      const isHovered =
+        !!hoveredCommentId && commentIds.includes(hoveredCommentId);
 
       anchor.dataset.selected = isSelected ? "true" : "false";
       anchor.dataset.hovered = isHovered ? "true" : "false";
@@ -381,13 +388,13 @@ export function PageCard({
         delete anchor.dataset.hovered;
       }
     };
-  }, [commentGroups, editor, hoveredCommentId, selectedCommentId]);
+  }, [editor, hoveredCommentId, selectedCommentId]);
 
   useEffect(() => {
     if (!editor) return;
 
     const anchorElements = editor.view.dom.querySelectorAll<HTMLElement>(
-      ".comment-anchor[data-comment-ids]"
+      ".comment-anchor[data-comment-ids]",
     );
     const cleanupCallbacks: Array<() => void> = [];
 
@@ -398,7 +405,7 @@ export function PageCard({
       const handleMouseEnter = () => {
         const nextCommentId = getPreferredCommentId(
           commentIds,
-          selectedCommentIdRef.current
+          selectedCommentIdRef.current,
         );
         if (nextCommentId) {
           setHoveredCommentId(nextCommentId);
@@ -407,14 +414,14 @@ export function PageCard({
 
       const handleMouseLeave = () => {
         setHoveredCommentId((current) =>
-          current && commentIds.includes(current) ? null : current
+          current && commentIds.includes(current) ? null : current,
         );
       };
 
       const handleClick = () => {
         const nextCommentId = getPreferredCommentId(
           commentIds,
-          selectedCommentIdRef.current
+          selectedCommentIdRef.current,
         );
         if (nextCommentId) {
           setSelectedCommentId(nextCommentId);
@@ -436,7 +443,7 @@ export function PageCard({
         cleanup();
       }
     };
-  }, [commentGroups, editor]);
+  }, [editor]);
 
   const handleAddComment = useCallback(() => {
     const currentEditor = editorRef.current;
@@ -477,7 +484,7 @@ export function PageCard({
       setComments(nextComments);
       scheduleSave(undefined, nextComments);
     },
-    [scheduleSave]
+    [scheduleSave],
   );
 
   const deleteComment = useCallback(
@@ -491,15 +498,21 @@ export function PageCard({
       setComments(nextComments);
 
       currentEditor.chain().focus().removeCommentId(commentId).run();
-      setActiveCommentIds((current) => current.filter((id) => id !== commentId));
-      setSelectedCommentId((current) => (current === commentId ? null : current));
-      setHoveredCommentId((current) => (current === commentId ? null : current));
+      setActiveCommentIds((current) =>
+        current.filter((id) => id !== commentId),
+      );
+      setSelectedCommentId((current) =>
+        current === commentId ? null : current,
+      );
+      setHoveredCommentId((current) =>
+        current === commentId ? null : current,
+      );
       scheduleSave(currentEditor.getJSON(), nextComments);
       requestAnimationFrame(() => {
         measureLayout();
       });
     },
-    [measureLayout, scheduleSave]
+    [measureLayout, scheduleSave],
   );
 
   const selectComment = useCallback((commentId: string) => {
@@ -517,8 +530,10 @@ export function PageCard({
       currentEditor.commands.focus();
       currentEditor.view.dispatch(
         currentEditor.state.tr
-          .setSelection(TextSelection.create(currentEditor.state.doc, range.from, range.to))
-          .scrollIntoView()
+          .setSelection(
+            TextSelection.create(currentEditor.state.doc, range.from, range.to),
+          )
+          .scrollIntoView(),
       );
       return;
     }
@@ -543,7 +558,7 @@ export function PageCard({
       (event.target as HTMLElement).setPointerCapture(event.pointerId);
       onSelect(page.id);
     },
-    [mode, onSelect, page.id, x, y]
+    [mode, onSelect, page.id, x, y],
   );
 
   const handleDragPointerMove = useCallback(
@@ -553,7 +568,7 @@ export function PageCard({
       const dy = (event.clientY - dragStart.current.pageY) / scale;
       onReposition(page.id, dragStart.current.x + dx, dragStart.current.y + dy);
     },
-    [mode, onReposition, page.id, scale]
+    [mode, onReposition, page.id, scale],
   );
 
   const handleDragPointerUp = useCallback(() => {
@@ -565,7 +580,7 @@ export function PageCard({
       event.stopPropagation();
       onSelect?.(page.id);
     },
-    [onSelect, page.id]
+    [onSelect, page.id],
   );
 
   const handleSelectPageCapture = useCallback(() => {
@@ -574,7 +589,9 @@ export function PageCard({
 
   const isCanvasMode = mode === "canvas";
   const showCanvasRail = isCanvasMode && comments.size > 0;
-  const chromeTitle = isCanvasMode ? getCanvasFilenameLabel(page.id) : page.title;
+  const chromeTitle = isCanvasMode
+    ? getCanvasFilenameLabel(page.id)
+    : page.title;
   const activeComments = activeCommentIds
     .map((commentId) => comments.get(commentId))
     .filter((comment): comment is CriticComment => Boolean(comment));
@@ -589,17 +606,12 @@ export function PageCard({
   return (
     <div
       className={
-        isCanvasMode
-          ? `absolute ${selected ? "z-10" : "z-0"}`
-          : "w-full"
+        isCanvasMode ? `absolute ${selected ? "z-10" : "z-0"}` : "w-full"
       }
       style={isCanvasMode ? { left: x, top: y } : undefined}
     >
       {isCanvasMode ? (
-        <div
-          className="relative"
-          style={{ width: CANVAS_CONTENT_WIDTH }}
-        >
+        <div className="relative" style={{ width: CANVAS_CONTENT_WIDTH }}>
           <div
             className={`rounded-3xl border bg-white/95 shadow-[0_18px_50px_rgba(15,23,42,0.14)] backdrop-blur transition-[border-color,box-shadow] ${
               selected
@@ -613,7 +625,9 @@ export function PageCard({
               onPointerMove={handleDragPointerMove}
               onPointerUp={handleDragPointerUp}
             >
-              <span className="flex-1 truncate text-sm text-slate-500">{chromeTitle}</span>
+              <span className="flex-1 truncate text-sm text-slate-500">
+                {chromeTitle}
+              </span>
               {saveState === "saving" ? (
                 <span className="text-[11px] font-medium tracking-[0.08em] text-slate-400 uppercase">
                   Saving…
@@ -626,6 +640,7 @@ export function PageCard({
               ) : null}
               {canDelete ? (
                 <button
+                  type="button"
                   className="inline-flex size-7 items-center justify-center rounded-full border border-transparent text-lg leading-none text-slate-400 transition hover:border-rose-100 hover:bg-rose-50 hover:text-rose-600 focus:outline-none focus-visible:ring-2 focus-visible:ring-rose-300"
                   onPointerDown={(event) => event.stopPropagation()}
                   onClick={(event) => {
@@ -690,7 +705,9 @@ export function PageCard({
           className="cursor-text bg-transparent"
           onPointerDown={handleBodyPointerDown}
         >
-          {!documentToolbarHost ? toolbar : createPortal(toolbar, documentToolbarHost)}
+          {!documentToolbarHost
+            ? toolbar
+            : createPortal(toolbar, documentToolbarHost)}
           <div className="document-page-shell">
             <div className="min-w-0">
               {activeComments.length > 0 ? (

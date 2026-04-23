@@ -58,7 +58,9 @@ describe("CriticMarkup comments", () => {
     const output = editorStateToCriticMarkdown(doc, comments);
 
     expect(output).toContain("## Sprint Notes");
-    expect(output).toContain("{==Second item==}{>>Needs review<<}{@id:cmt4;by:AI;at:2024-01-15T10:33:00.000Z@}");
+    expect(output).toContain(
+      "{==Second item==}{>>Needs review<<}{@id:cmt4;by:AI;at:2024-01-15T10:33:00.000Z@}",
+    );
     expect(output).toContain("*   First item");
   });
 });

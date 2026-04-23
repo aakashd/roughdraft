@@ -18,7 +18,7 @@ export interface AddCommentShortcutEventLike {
 
 export function matchesAddCommentShortcut(
   event: AddCommentShortcutEventLike,
-  platform?: string | null
+  platform?: string | null,
 ) {
   if (event.shiftKey || event.key.toLowerCase() !== "m" || !event.altKey) {
     return false;

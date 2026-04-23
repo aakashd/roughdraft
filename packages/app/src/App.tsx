@@ -103,9 +103,14 @@ function hasCriticMarkupComments(content: string) {
   return content.includes("{>>");
 }
 
-function getCanvasFrameWidth(page: Page | null | undefined, fallbackWidth: number) {
+function getCanvasFrameWidth(
+  page: Page | null | undefined,
+  fallbackWidth: number,
+) {
   if (!page) return fallbackWidth;
-  return hasCriticMarkupComments(page.content) ? CANVAS_FRAME_WIDTH_WITH_RAIL : fallbackWidth;
+  return hasCriticMarkupComments(page.content)
+    ? CANVAS_FRAME_WIDTH_WITH_RAIL
+    : fallbackWidth;
 }
 
 function getSaveStateLabel(saveState: "idle" | "saving" | "error") {
@@ -659,7 +664,10 @@ export function App() {
     ? {
         x: firstPageLayout?.x ?? 0,
         y: firstPageLayout?.y ?? 0,
-        width: getCanvasFrameWidth(firstPage, firstPageLayout?.width ?? CANVAS_FRAME_WIDTH),
+        width: getCanvasFrameWidth(
+          firstPage,
+          firstPageLayout?.width ?? CANVAS_FRAME_WIDTH,
+        ),
         height: firstPageLayout?.height ?? 500,
       }
     : null;
@@ -820,17 +828,19 @@ export function App() {
               <div className="min-h-0 flex-1 overflow-y-auto px-8 py-8 sm:px-12">
                 <div className="mx-auto min-h-full max-w-[1080px]">
                   {documentPage ? (
-                    <PageCard
-                      key={`${documentPage.id}:${activeDocumentPath ?? ""}`}
-                      page={documentPage}
-                      mode="document"
-                      selected
-                      canDelete={false}
-                      onSave={handleSaveDocument}
-                      onSaveStateChange={setDocumentSaveState}
-                      documentToolbarHost={documentToolbarHost}
-                      backend={backend!}
-                    />
+                    backend ? (
+                      <PageCard
+                        key={`${documentPage.id}:${activeDocumentPath ?? ""}`}
+                        page={documentPage}
+                        mode="document"
+                        selected
+                        canDelete={false}
+                        onSave={handleSaveDocument}
+                        onSaveStateChange={setDocumentSaveState}
+                        documentToolbarHost={documentToolbarHost}
+                        backend={backend}
+                      />
+                    ) : null
                   ) : (
                     <div className="flex min-h-[50vh] items-center justify-center text-sm text-slate-500">
                       Select a markdown file from the sidebar.
@@ -849,6 +859,8 @@ export function App() {
             >
               {pages.map((page) => {
                 const pos = layout.pages[page.id] || { x: 0, y: 0 };
+                if (!backend) return null;
+
                 return (
                   <PageCard
                     key={page.id}
@@ -866,7 +878,7 @@ export function App() {
                     onSave={handleSavePage}
                     onReposition={handleReposition}
                     onDelete={handleDeletePage}
-                    backend={backend!}
+                    backend={backend}
                   />
                 );
               })}

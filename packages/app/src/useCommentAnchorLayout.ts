@@ -44,9 +44,12 @@ export function useCommentAnchorLayout(editor: Editor | null, enabled = true) {
 
       const editorRect = editorElement.getBoundingClientRect();
       const anchorElements = editorElement.querySelectorAll<HTMLElement>(
-        ".comment-anchor[data-comment-ids]"
+        ".comment-anchor[data-comment-ids]",
       );
-      const measurements = getCommentAnchorMeasurements(anchorElements, editorRect.top);
+      const measurements = getCommentAnchorMeasurements(
+        anchorElements,
+        editorRect.top,
+      );
 
       setLayoutState({
         commentGroups: groupCommentAnchorMeasurements(measurements),

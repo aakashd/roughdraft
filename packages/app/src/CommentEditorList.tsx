@@ -35,7 +35,7 @@ export function CommentEditorList({
         variant === "banner"
           ? "space-y-3 rounded-2xl border border-amber-200/80 bg-amber-50/70 p-3"
           : "space-y-2",
-        className
+        className,
       )}
     >
       {comments.map((comment, index) => {
@@ -54,7 +54,7 @@ export function CommentEditorList({
                   ? "rounded-xl bg-amber-100/70 px-3 py-3"
                   : isHovered
                     ? "rounded-xl bg-amber-50/80 px-3 py-3"
-                    : "px-3 py-3")
+                    : "px-3 py-3"),
             )}
             onClick={() => onFocusComment?.(comment.id)}
             onMouseEnter={() => onHoverComment?.(comment.id)}
@@ -65,7 +65,7 @@ export function CommentEditorList({
               <span
                 className={cn(
                   "text-[11px] font-semibold tracking-[0.12em] uppercase",
-                  variant === "banner" ? "text-amber-800" : "text-slate-600"
+                  variant === "banner" ? "text-amber-800" : "text-slate-600",
                 )}
               >
                 Comment
@@ -76,7 +76,7 @@ export function CommentEditorList({
                   "text-xs font-medium transition",
                   variant === "banner"
                     ? "text-amber-900/80 hover:text-rose-700"
-                    : "text-slate-500 hover:text-rose-700"
+                    : "text-slate-500 hover:text-rose-700",
                 )}
                 onPointerDown={(event) => event.stopPropagation()}
                 onClick={(event) => {
@@ -94,7 +94,7 @@ export function CommentEditorList({
                 "min-h-20 text-sm text-slate-800",
                 variant === "banner"
                   ? "border-amber-200 bg-white/90"
-                  : "border-slate-200 bg-white shadow-none"
+                  : "border-slate-200 bg-white shadow-none",
               )}
               onPointerDown={(event) => {
                 event.stopPropagation();

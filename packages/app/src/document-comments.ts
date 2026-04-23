@@ -33,7 +33,11 @@ export function parseCommentIds(value: string | null | undefined): string[] {
   try {
     const parsed = JSON.parse(value);
     if (!Array.isArray(parsed)) return [];
-    return [...new Set(parsed.filter((entry): entry is string => typeof entry === "string"))];
+    return [
+      ...new Set(
+        parsed.filter((entry): entry is string => typeof entry === "string"),
+      ),
+    ];
   } catch {
     return [];
   }
@@ -45,7 +49,7 @@ export function getCommentGroupKey(commentIds: string[]): string {
 
 export function getPreferredCommentId(
   commentIds: string[],
-  currentCommentId: string | null
+  currentCommentId: string | null,
 ): string | null {
   if (currentCommentId && commentIds.includes(currentCommentId)) {
     return currentCommentId;
@@ -56,7 +60,7 @@ export function getPreferredCommentId(
 
 export function getCommentAnchorMeasurements(
   anchorElements: Iterable<CommentAnchorElementLike>,
-  containerTop: number
+  containerTop: number,
 ): CommentAnchorMeasurement[] {
   const measurements: CommentAnchorMeasurement[] = [];
 
@@ -76,7 +80,7 @@ export function getCommentAnchorMeasurements(
 }
 
 export function groupCommentAnchorMeasurements(
-  measurements: CommentAnchorMeasurement[]
+  measurements: CommentAnchorMeasurement[],
 ): CommentGroupAnchor[] {
   const grouped = new Map<string, CommentGroupAnchor>();
 
@@ -95,22 +99,30 @@ export function groupCommentAnchorMeasurements(
     }
 
     existing.anchorTop = Math.min(existing.anchorTop, measurement.anchorTop);
-    existing.anchorBottom = Math.max(existing.anchorBottom, measurement.anchorBottom);
+    existing.anchorBottom = Math.max(
+      existing.anchorBottom,
+      measurement.anchorBottom,
+    );
   }
 
-  return [...grouped.values()].sort((left, right) => left.anchorTop - right.anchorTop);
+  return [...grouped.values()].sort(
+    (left, right) => left.anchorTop - right.anchorTop,
+  );
 }
 
 export function resolveCommentRailLayouts(
   groups: CommentGroupAnchor[],
   heights: Record<string, number>,
-  gap = 16
+  gap = 16,
 ): CommentRailLayout[] {
   let previousRailBottom = 0;
 
   return groups.map((group) => {
     const height = heights[group.key] ?? 120;
-    const railTop = Math.max(group.anchorTop, previousRailBottom === 0 ? group.anchorTop : previousRailBottom + gap);
+    const railTop = Math.max(
+      group.anchorTop,
+      previousRailBottom === 0 ? group.anchorTop : previousRailBottom + gap,
+    );
     const railBottom = railTop + height;
     previousRailBottom = railBottom;
 

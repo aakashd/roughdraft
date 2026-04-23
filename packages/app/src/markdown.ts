@@ -136,7 +136,7 @@ export function createTurndownService(): TurndownService {
 const turndown = createTurndownService();
 
 export function toMarkdown(html: string): string {
-  return turndown.turndown(html).trimEnd() + "\n";
+  return `${turndown.turndown(html).trimEnd()}\n`;
 }
 
 export function toHtml(markdown: string, options?: MarkdownOptions): string {

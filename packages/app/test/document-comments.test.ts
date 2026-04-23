@@ -19,7 +19,7 @@ describe("document comment layout helpers", () => {
           }),
         },
       ],
-      120
+      120,
     );
 
     expect(measurements).toEqual([
@@ -93,27 +93,31 @@ describe("document comment layout helpers", () => {
         "cmt-6": 90,
         "cmt-7": 80,
       },
-      16
+      16,
     );
 
-    expect(layouts.map(({ key, railTop, railBottom }) => ({ key, railTop, railBottom }))).toEqual(
-      [
-        {
-          key: "cmt-5",
-          railTop: 20,
-          railBottom: 120,
-        },
-        {
-          key: "cmt-6",
-          railTop: 136,
-          railBottom: 226,
-        },
-        {
-          key: "cmt-7",
-          railTop: 242,
-          railBottom: 322,
-        },
-      ]
-    );
+    expect(
+      layouts.map(({ key, railTop, railBottom }) => ({
+        key,
+        railTop,
+        railBottom,
+      })),
+    ).toEqual([
+      {
+        key: "cmt-5",
+        railTop: 20,
+        railBottom: 120,
+      },
+      {
+        key: "cmt-6",
+        railTop: 136,
+        railBottom: 226,
+      },
+      {
+        key: "cmt-7",
+        railTop: 242,
+        railBottom: 322,
+      },
+    ]);
   });
 });

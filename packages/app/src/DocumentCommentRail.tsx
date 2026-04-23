@@ -53,17 +53,26 @@ export function DocumentCommentRail({
             visibleComments,
           };
         })
-        .filter((group): group is CommentGroupAnchor & { visibleComments: CriticComment[] } => Boolean(group)),
-    [commentGroups, comments]
+        .filter(
+          (
+            group,
+          ): group is CommentGroupAnchor & {
+            visibleComments: CriticComment[];
+          } => Boolean(group),
+        ),
+    [commentGroups, comments],
   );
 
-  const setGroupRef = useCallback((key: string, node: HTMLDivElement | null) => {
-    if (node) {
-      groupRefs.current.set(key, node);
-    } else {
-      groupRefs.current.delete(key);
-    }
-  }, []);
+  const setGroupRef = useCallback(
+    (key: string, node: HTMLDivElement | null) => {
+      if (node) {
+        groupRefs.current.set(key, node);
+      } else {
+        groupRefs.current.delete(key);
+      }
+    },
+    [],
+  );
 
   useLayoutEffect(() => {
     if (visibleGroups.length === 0) {
@@ -78,14 +87,19 @@ export function DocumentCommentRail({
 
         for (const group of visibleGroups) {
           const element = groupRefs.current.get(group.key);
-          const height = Math.ceil(element?.getBoundingClientRect().height ?? current[group.key] ?? 0);
+          const height = Math.ceil(
+            element?.getBoundingClientRect().height ?? current[group.key] ?? 0,
+          );
           next[group.key] = height;
           if (current[group.key] !== height) {
             changed = true;
           }
         }
 
-        if (!changed && Object.keys(current).length === Object.keys(next).length) {
+        if (
+          !changed &&
+          Object.keys(current).length === Object.keys(next).length
+        ) {
           return current;
         }
 
@@ -111,20 +125,19 @@ export function DocumentCommentRail({
     };
   }, [visibleGroups]);
 
-  const layouts = useMemo(
-    () => {
-      const baseLayouts = resolveCommentRailLayouts(visibleGroups, groupHeights);
+  const layouts = useMemo(() => {
+    const baseLayouts = resolveCommentRailLayouts(visibleGroups, groupHeights);
 
-      return baseLayouts.map((layout) => ({
-        ...layout,
-        visibleComments:
-          visibleGroups.find((group) => group.key === layout.key)?.visibleComments ?? [],
-      }));
-    },
-    [groupHeights, visibleGroups]
-  );
+    return baseLayouts.map((layout) => ({
+      ...layout,
+      visibleComments:
+        visibleGroups.find((group) => group.key === layout.key)
+          ?.visibleComments ?? [],
+    }));
+  }, [groupHeights, visibleGroups]);
 
-  const railHeight = Math.max(contentHeight, layouts.at(-1)?.railBottom ?? 0) + 24;
+  const railHeight =
+    Math.max(contentHeight, layouts.at(-1)?.railBottom ?? 0) + 24;
 
   if (visibleGroups.length === 0) {
     return <aside className={cn("min-w-0", className)} aria-hidden="true" />;
@@ -134,8 +147,11 @@ export function DocumentCommentRail({
     <aside className={cn("min-w-0", className)}>
       <div className="relative" style={{ minHeight: railHeight }}>
         {layouts.map((layout) => {
-          const isSelected = !!selectedCommentId && layout.commentIds.includes(selectedCommentId);
-          const isHovered = !!hoveredCommentId && layout.commentIds.includes(hoveredCommentId);
+          const isSelected =
+            !!selectedCommentId &&
+            layout.commentIds.includes(selectedCommentId);
+          const isHovered =
+            !!hoveredCommentId && layout.commentIds.includes(hoveredCommentId);
           const primaryCommentId =
             getPreferredCommentId(layout.commentIds, selectedCommentId) ??
             layout.visibleComments[0]?.id;
@@ -150,7 +166,7 @@ export function DocumentCommentRail({
                   ? "border-amber-300 bg-amber-50/80 shadow-[0_16px_36px_rgba(217,119,6,0.14)]"
                   : isHovered
                     ? "border-amber-200 bg-amber-50/50 shadow-[0_12px_32px_rgba(217,119,6,0.10)]"
-                    : "border-slate-200/90"
+                    : "border-slate-200/90",
               )}
               style={{ top: layout.railTop }}
               onMouseEnter={() => {

@@ -1,9 +1,12 @@
+import { generateHTML, generateJSON, type JSONContent } from "@tiptap/core";
 import {
-  generateHTML,
-  generateJSON,
-  type JSONContent,
-} from "@tiptap/core";
-import { Marked, type Token } from "marked";
+  Marked,
+  type RendererThis,
+  type Token,
+  type TokenizerAndRendererExtension,
+  type TokenizerThis,
+  type Tokens,
+} from "marked";
 import type TurndownService from "turndown";
 import { createEditorExtensions } from "../editor-extensions";
 import {
@@ -85,6 +88,36 @@ function serializeMetadata(comment: CriticComment): string {
   return `{@${fields.join(";")}@}`;
 }
 
+function tokenizeCriticCommentAnchor(
+  lexer: TokenizerThis["lexer"],
+  src: string,
+):
+  | {
+      token: CriticCommentToken;
+      comment: CriticComment;
+    }
+  | undefined {
+  const match = src.match(criticCommentWithAnchorPattern);
+
+  if (!match) return undefined;
+
+  const [, anchor, commentText, metadataText] = match;
+  const comment: CriticComment = {
+    ...parseMetadata(metadataText),
+    content: commentText,
+  };
+
+  return {
+    token: {
+      type: "criticCommentAnchor",
+      raw: match[0],
+      commentIds: [comment.id],
+      tokens: lexer.inlineTokens(anchor),
+    },
+    comment,
+  };
+}
+
 function addCriticCommentRule(
   service: TurndownService,
   comments: Map<string, CriticComment>,
@@ -94,7 +127,9 @@ function addCriticCommentRule(
       node.nodeName === "SPAN" &&
       (node as HTMLElement).hasAttribute("data-comment-ids"),
     replacement(content, node) {
-      const commentIdsText = (node as HTMLElement).getAttribute("data-comment-ids");
+      const commentIdsText = (node as HTMLElement).getAttribute(
+        "data-comment-ids",
+      );
 
       if (!commentIdsText) return content;
 
@@ -144,36 +179,21 @@ function createCriticMarked(markdownOptions?: MarkdownOptions) {
         start(src: string) {
           return src.indexOf("{==");
         },
-        tokenizer(this: any, src: string): CriticCommentToken | undefined {
-          const match = src.match(criticCommentWithAnchorPattern);
+        tokenizer(this: TokenizerThis, src: string) {
+          const result = tokenizeCriticCommentAnchor(this.lexer, src);
+          if (!result) return undefined;
 
-          if (!match) return undefined;
-
-          const [, anchor, commentText, metadataText] = match;
-          const comment: CriticComment = {
-            ...parseMetadata(metadataText),
-            content: commentText,
-          };
-
-          comments.set(comment.id, comment);
-
-          return {
-            type: "criticCommentAnchor",
-            raw: match[0],
-            commentIds: [comment.id],
-            tokens: this.lexer.inlineTokens(anchor),
-          };
+          comments.set(result.comment.id, result.comment);
+          return result.token;
         },
-        renderer(this: any, token: Token) {
+        renderer(this: RendererThis, token: Tokens.Generic) {
           const criticToken = token as CriticCommentToken;
           return `<span data-comment-ids="${escapeHtml(
             JSON.stringify(criticToken.commentIds),
-          )}">${this.parser.parseInline(
-            criticToken.tokens,
-          )}</span>`;
+          )}">${this.parser.parseInline(criticToken.tokens)}</span>`;
         },
         childTokens: ["tokens"],
-      } as any,
+      } satisfies TokenizerAndRendererExtension,
     ],
   });
 
@@ -198,10 +218,12 @@ export function editorStateToCriticMarkdown(
   const html = generateHTML(doc, extensions);
   const service = createTurndownService();
   addCriticCommentRule(service, comments);
-  return service.turndown(html).trimEnd() + "\n";
+  return `${service.turndown(html).trimEnd()}\n`;
 }
 
-export function createCriticComment(partial?: Partial<CriticComment>): CriticComment {
+export function createCriticComment(
+  partial?: Partial<CriticComment>,
+): CriticComment {
   const authorType = partial?.authorType ?? "user";
 
   return {
@@ -209,8 +231,7 @@ export function createCriticComment(partial?: Partial<CriticComment>): CriticCom
     content: partial?.content ?? "",
     createdAt: partial?.createdAt ?? new Date().toISOString(),
     authorType,
-    authorId:
-      partial?.authorId ?? (authorType === "ai" ? null : "user"),
+    authorId: partial?.authorId ?? (authorType === "ai" ? null : "user"),
     parentCommentId: partial?.parentCommentId ?? null,
   };
 }
