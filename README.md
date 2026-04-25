@@ -47,13 +47,13 @@ roughdraft start
 Open a specific project folder:
 
 ```bash
-roughdraft open /absolute/path/to/my-essay
+roughdraft open ./path/to/my-essay
 ```
 
 Open a specific markdown file directly:
 
 ```bash
-roughdraft open /absolute/path/to/my-essay/draft.md
+roughdraft open ./path/to/my-essay/draft.md
 ```
 
 Check or stop the background server:

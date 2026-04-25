@@ -71,6 +71,7 @@ describe("cli", () => {
   let tempDir: string;
   let stateDir: string;
   let projectDir: string;
+  let devFrontendStateFile: string;
   let nextPid: number;
   let runningPids: Set<number>;
   let serverByPid: Map<number, StartedServer>;
@@ -83,6 +84,7 @@ describe("cli", () => {
     tempDir = fs.mkdtempSync(path.join(os.tmpdir(), "roughdraft-cli-"));
     stateDir = path.join(tempDir, "state");
     projectDir = path.join(tempDir, "project");
+    devFrontendStateFile = path.join(tempDir, "dev-frontend.json");
     fs.mkdirSync(projectDir, { recursive: true });
     nextPid = 1000;
     runningPids = new Set<number>();
@@ -107,6 +109,7 @@ describe("cli", () => {
       env: {
         ...process.env,
         ROUGHDRAFT_STATE_DIR: stateDir,
+        ROUGHDRAFT_DEV_FRONTEND_STATE_FILE: devFrontendStateFile,
       },
       cwd: projectDir,
       fetchImpl: async (input, init) => {
@@ -214,6 +217,189 @@ describe("cli", () => {
       `http://localhost:${persisted.port}${documentPath}`,
     );
     expect(fs.existsSync(getServerStateFilePath(test.deps.env))).toBeTruthy();
+  });
+
+  it("prefers the live dev frontend URL when it matches this checkout", async () => {
+    const documentPath = path.join(projectDir, "draft.md");
+    fs.writeFileSync(documentPath, "# Draft\n");
+    fs.writeFileSync(
+      devFrontendStateFile,
+      `${JSON.stringify(
+        {
+          apiPort: 3000,
+          appPort: 5173,
+          mode: "full-dev",
+          repoRoot: serverRoot,
+          startedAt: new Date().toISOString(),
+          url: "http://localhost:5173",
+        },
+        null,
+        2,
+      )}\n`,
+    );
+
+    let lastOpenedUrl: string | null = null;
+    let spawnCount = 0;
+
+    const deps = createCliDependencies({
+      env: {
+        ...process.env,
+        ROUGHDRAFT_STATE_DIR: stateDir,
+        ROUGHDRAFT_DEV_FRONTEND_STATE_FILE: devFrontendStateFile,
+      },
+      cwd: projectDir,
+      fetchImpl: async (input, init) => {
+        const url =
+          input instanceof URL
+            ? input
+            : new URL(
+                typeof input === "string" ? input : input.url,
+                "http://localhost",
+              );
+
+        if (url.pathname === "/api/status" && url.port === "5173") {
+          return new Response(
+            JSON.stringify({
+              backend: "local-files",
+              projectDir,
+              serverRoot,
+            }),
+            {
+              status: 200,
+              headers: { "Content-Type": "application/json" },
+            },
+          );
+        }
+
+        return fetch(input, init);
+      },
+      spawnServerProcess: async () => {
+        spawnCount += 1;
+        throw new Error("should not spawn");
+      },
+      isProcessRunning: (pid) => runningPids.has(pid),
+      stopProcess: async (pid) => {
+        const server = serverByPid.get(pid);
+        if (server) {
+          await server.close();
+        }
+        serverByPid.delete(pid);
+        portByPid.delete(pid);
+        runningPids.delete(pid);
+      },
+      openUrl: (url) => {
+        lastOpenedUrl = url;
+        return "disabled";
+      },
+      log: () => {},
+      error: () => {},
+    });
+
+    const exitCode = await runCli(["open", documentPath], deps);
+
+    expect(exitCode).toBe(0);
+    expect(spawnCount).toBe(0);
+    expect(lastOpenedUrl).toBe(`http://localhost:5173${documentPath}`);
+  });
+
+  it("falls back to the api server URL when the dev frontend hint is stale", async () => {
+    const documentPath = path.join(projectDir, "draft.md");
+    fs.writeFileSync(documentPath, "# Draft\n");
+    fs.writeFileSync(
+      devFrontendStateFile,
+      `${JSON.stringify(
+        {
+          apiPort: 3000,
+          appPort: 5173,
+          mode: "full-dev",
+          repoRoot: serverRoot,
+          startedAt: new Date().toISOString(),
+          url: "http://localhost:5173",
+        },
+        null,
+        2,
+      )}\n`,
+    );
+
+    const test = createTestDependencies();
+    const exitCode = await runCli(["open", documentPath], test.deps);
+    const persisted = JSON.parse(
+      fs.readFileSync(getServerStateFilePath(test.deps.env), "utf8"),
+    ) as { port: number };
+
+    expect(exitCode).toBe(0);
+    expect(test.getSpawnCount()).toBe(1);
+    expect(test.getLastOpenedUrl()).toBe(
+      `http://localhost:${persisted.port}${documentPath}`,
+    );
+  });
+
+  it("uses the preview-web frontend URL when that workflow is active", async () => {
+    const documentPath = path.join(projectDir, "draft.md");
+    fs.writeFileSync(documentPath, "# Draft\n");
+    fs.writeFileSync(
+      devFrontendStateFile,
+      `${JSON.stringify(
+        {
+          apiPort: null,
+          appPort: 5174,
+          mode: "preview-web",
+          repoRoot: serverRoot,
+          startedAt: new Date().toISOString(),
+          url: "http://localhost:5174",
+        },
+        null,
+        2,
+      )}\n`,
+    );
+
+    let lastOpenedUrl: string | null = null;
+    let spawnCount = 0;
+
+    const deps = createCliDependencies({
+      env: {
+        ...process.env,
+        ROUGHDRAFT_STATE_DIR: stateDir,
+        ROUGHDRAFT_DEV_FRONTEND_STATE_FILE: devFrontendStateFile,
+      },
+      cwd: projectDir,
+      fetchImpl: async (input) => {
+        const url =
+          input instanceof URL
+            ? input
+            : new URL(
+                typeof input === "string" ? input : input.url,
+                "http://localhost",
+              );
+
+        if (url.href === "http://localhost:5174/") {
+          return new Response("<!doctype html><html></html>", {
+            status: 200,
+            headers: { "Content-Type": "text/html" },
+          });
+        }
+
+        throw new Error("connect ECONNREFUSED");
+      },
+      spawnServerProcess: async () => {
+        spawnCount += 1;
+        throw new Error("should not spawn");
+      },
+      isProcessRunning: () => false,
+      stopProcess: async () => {},
+      openUrl: (url) => {
+        lastOpenedUrl = url;
+        return "disabled";
+      },
+      log: () => {},
+      error: () => {},
+    });
+
+    const exitCode = await runCli(["open", documentPath], deps);
+
+    expect(exitCode).toBe(0);
+    expect(spawnCount).toBe(0);
+    expect(lastOpenedUrl).toBe(`http://localhost:5174${documentPath}`);
   });
 
   it("rejects missing markdown files before opening", async () => {
