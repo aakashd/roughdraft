@@ -207,8 +207,7 @@ export function EditorContextMenu({
       canToggleBulletList:
         currentEditor?.can().chain().focus().toggleBulletList().run() ?? false,
       canToggleOrderedList:
-        currentEditor?.can().chain().focus().toggleOrderedList().run() ??
-        false,
+        currentEditor?.can().chain().focus().toggleOrderedList().run() ?? false,
       canToggleBlockquote:
         currentEditor?.can().chain().focus().toggleBlockquote().run() ?? false,
     }),

@@ -58,9 +58,9 @@ export function App() {
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [canvasRevealRequest, setCanvasRevealRequest] =
     useState<CanvasRevealRequest | null>(null);
-  const [, setDocumentSaveState] = useState<
-    "idle" | "saving" | "error"
-  >("idle");
+  const [, setDocumentSaveState] = useState<"idle" | "saving" | "error">(
+    "idle",
+  );
   const documentEditorViewMode =
     getDocumentEditorViewModeFromLocation("rich-text");
   const [projectTreeVersion, setProjectTreeVersion] = useState(0);
@@ -605,7 +605,9 @@ export function App() {
               activeDocumentPath={activeDocumentPath}
               documentFilenameLabel={documentFilenameLabel}
               documentEditorViewMode={documentEditorViewMode}
-              onDocumentEditorViewModeChange={handleDocumentEditorViewModeChange}
+              onDocumentEditorViewModeChange={
+                handleDocumentEditorViewModeChange
+              }
               onSaveDocument={handleSaveDocument}
               onDocumentSaveStateChange={setDocumentSaveState}
               backend={backend}

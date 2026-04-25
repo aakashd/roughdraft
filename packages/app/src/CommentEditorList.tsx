@@ -267,14 +267,12 @@ const COMMENT_AVATAR_CENTER = 16;
 
 function CommentActionButton({
   label,
-  variant,
   tone = "neutral",
   icon,
   compact = false,
   onClick,
 }: {
   label: string;
-  variant: "banner" | "rail";
   tone?: "neutral" | "danger";
   icon: ReactNode;
   compact?: boolean;
@@ -546,7 +544,6 @@ function CommentThreadNode({
                   <>
                     <CommentActionButton
                       label="Save"
-                      variant={variant}
                       icon={<Check className="size-3.5" />}
                       onClick={(event) => {
                         event.stopPropagation();
@@ -555,7 +552,6 @@ function CommentThreadNode({
                     />
                     <CommentActionButton
                       label="Cancel"
-                      variant={variant}
                       icon={<X className="size-3.5" />}
                       onClick={(event) => {
                         event.stopPropagation();
@@ -567,7 +563,6 @@ function CommentThreadNode({
                   <>
                     <CommentActionButton
                       label="Reply"
-                      variant={variant}
                       icon={<Reply className="size-3.5" />}
                       compact
                       onClick={(event) => {
@@ -577,7 +572,6 @@ function CommentThreadNode({
                     />
                     <CommentActionButton
                       label="Edit"
-                      variant={variant}
                       icon={<Pencil className="size-3.5" />}
                       compact
                       onClick={(event) => {
@@ -587,7 +581,6 @@ function CommentThreadNode({
                     />
                     <CommentActionButton
                       label="Delete"
-                      variant={variant}
                       tone="danger"
                       icon={<Trash2 className="size-3.5" />}
                       compact

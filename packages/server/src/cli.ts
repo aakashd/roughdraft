@@ -427,7 +427,8 @@ function isValidDevFrontendState(value: unknown): value is DevFrontendState {
   const candidate = value as Partial<DevFrontendState>;
   return (
     (candidate.apiPort === null ||
-      (typeof candidate.apiPort === "number" && Number.isFinite(candidate.apiPort))) &&
+      (typeof candidate.apiPort === "number" &&
+        Number.isFinite(candidate.apiPort))) &&
     typeof candidate.appPort === "number" &&
     Number.isFinite(candidate.appPort) &&
     (candidate.mode === undefined ||
@@ -546,7 +547,9 @@ async function waitForServerToStop(
 async function resolveLiveDevFrontendBaseUrl(
   deps: CliDependencies,
 ): Promise<string | null> {
-  const state = readDevFrontendStateFromDisk(getDevFrontendStateFilePath(deps.env));
+  const state = readDevFrontendStateFromDisk(
+    getDevFrontendStateFilePath(deps.env),
+  );
   if (!state) {
     return null;
   }
@@ -557,7 +560,8 @@ async function resolveLiveDevFrontendBaseUrl(
 
   try {
     const frontendUrl = new URL(state.url);
-    const mode = state.mode ?? (state.apiPort === null ? "preview-web" : "full-dev");
+    const mode =
+      state.mode ?? (state.apiPort === null ? "preview-web" : "full-dev");
 
     if (mode === "preview-web") {
       const response = await deps.fetchImpl(frontendUrl, {
@@ -894,15 +898,16 @@ export async function runCli(
     const { projectDir, openPath } = resolvedTarget;
     const liveDevFrontendUrl = await resolveLiveDevFrontendBaseUrl(deps);
     let result: EnsureRunningResult | null = null;
+    let baseUrl: string;
 
-    if (!liveDevFrontendUrl) {
+    if (liveDevFrontendUrl) {
+      baseUrl = liveDevFrontendUrl;
+    } else {
       result = await ensureServerRunning(deps, { projectDir });
+      baseUrl = buildPublicBaseUrl(result.server.port);
     }
 
-    const targetUrl = buildTargetUrl(
-      liveDevFrontendUrl ?? buildPublicBaseUrl(result!.server.port),
-      openPath,
-    );
+    const targetUrl = buildTargetUrl(baseUrl, openPath);
     const openMode = deps.openUrl(targetUrl);
 
     if (result?.portChanged) {

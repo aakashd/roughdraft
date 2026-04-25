@@ -29,7 +29,9 @@ console.log(`Open Roughdraft in dev at http://localhost:${appPort}`);
 console.log(
   `Open files directly with http://localhost:${appPort}/absolute/path/to/file.md`,
 );
-console.log(`API port ${apiPort} is internal; don't use it as the browser URL.`);
+console.log(
+  `API port ${apiPort} is internal; don't use it as the browser URL.`,
+);
 
 writeDevFrontendState({ appPort, apiPort, mode: "full-dev" });
 

@@ -18,6 +18,7 @@ export function MarkdownCodeEditor({
   const hostRef = useRef<HTMLDivElement | null>(null);
   const editorViewRef = useRef<EditorView | null>(null);
   const onChangeRef = useRef(onChange);
+  const initialValueRef = useRef(value);
   const lastValueRef = useRef(value);
 
   useEffect(() => {
@@ -31,7 +32,7 @@ export function MarkdownCodeEditor({
     const view = new EditorView({
       parent: hostElement,
       state: EditorState.create({
-        doc: value,
+        doc: initialValueRef.current,
         extensions: [
           basicSetup,
           markdown(),
@@ -96,7 +97,7 @@ export function MarkdownCodeEditor({
     });
 
     editorViewRef.current = view;
-    lastValueRef.current = value;
+    lastValueRef.current = view.state.doc.toString();
 
     if (autoFocus) {
       view.focus();

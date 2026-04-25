@@ -305,10 +305,6 @@
     border-left-color: rgb(15 23 42);
   }
 
-  .markdown-code-editor .cm-selectionBackground {
-    background-color: rgb(224 242 254) !important;
-  }
-
   @media (min-width: 1100px) {
     .document-page-shell {
       display: grid;

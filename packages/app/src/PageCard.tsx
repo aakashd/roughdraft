@@ -438,7 +438,7 @@ const RichTextEditorSurface = memo(function RichTextEditorSurface({
     if (JSON.stringify(editor.getJSON()) !== JSON.stringify(nextDoc)) {
       editor.commands.setContent(nextDoc, { emitUpdate: false });
     }
-  }, [editor, parsedContent, sourceMarkdown]);
+  }, [editor, parsedContent]);
 
   useEffect(() => {
     if (!editor || !selected || !focusRequestKey) return;

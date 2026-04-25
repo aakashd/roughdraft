@@ -141,7 +141,9 @@ export function AppSidebar({
             buildLocationForPath={buildLocationForPath}
             layout="embedded"
             refreshKey={projectTreeVersion}
-            onOpenMarkdownPage={(relativePath) => void onOpenMarkdownPage(relativePath)}
+            onOpenMarkdownPage={(relativePath) =>
+              void onOpenMarkdownPage(relativePath)
+            }
           />
         ) : null}
       </div>

@@ -2,7 +2,11 @@ import fs from "node:fs";
 import path from "node:path";
 
 const repoRoot = path.resolve(import.meta.dirname, "..");
-const devFrontendStatePath = path.join(repoRoot, ".context", "dev-frontend.json");
+const devFrontendStatePath = path.join(
+  repoRoot,
+  ".context",
+  "dev-frontend.json",
+);
 
 export function writeDevFrontendState({
   apiPort = null,
