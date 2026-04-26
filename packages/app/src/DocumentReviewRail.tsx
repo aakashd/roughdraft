@@ -54,24 +54,6 @@ interface DocumentReviewRailProps {
   onAutoFocusComment?: (commentId: string) => void;
 }
 
-type ReviewRailEntry =
-  | {
-      type: "suggestion";
-      key: string;
-      anchorTop: number;
-      anchorBottom: number;
-      suggestion: CriticChangeRailItem;
-    }
-  | {
-      type: "comment";
-      key: string;
-      anchorTop: number;
-      anchorBottom: number;
-      thread: CommentThreadRailItem & {
-        visibleComments: CriticComment[];
-      };
-    };
-
 function getSuggestionTypeLabel(kind: CriticChangeKind) {
   if (kind === "addition") return "Insertion";
   if (kind === "deletion") return "Deletion";
@@ -199,25 +181,22 @@ export function DocumentReviewRail({
     [selectedCommentId, suggestions],
   );
 
-  const layouts = useMemo(
-    () => {
-      const entries = [...suggestionEntries, ...commentEntries].sort(
-        (left, right) => left.anchorTop - right.anchorTop,
-      );
-      const activeKey =
-        selectedChangeId ?? activeSuggestionIdForComment ?? activeRootThreadId;
+  const layouts = useMemo(() => {
+    const entries = [...suggestionEntries, ...commentEntries].sort(
+      (left, right) => left.anchorTop - right.anchorTop,
+    );
+    const activeKey =
+      selectedChangeId ?? activeSuggestionIdForComment ?? activeRootThreadId;
 
-      return resolveAnchoredRailLayouts(entries, itemHeights, activeKey);
-    },
-    [
-      activeRootThreadId,
-      activeSuggestionIdForComment,
-      commentEntries,
-      itemHeights,
-      selectedChangeId,
-      suggestionEntries,
-    ],
-  );
+    return resolveAnchoredRailLayouts(entries, itemHeights, activeKey);
+  }, [
+    activeRootThreadId,
+    activeSuggestionIdForComment,
+    commentEntries,
+    itemHeights,
+    selectedChangeId,
+    suggestionEntries,
+  ]);
 
   const setItemRef = useCallback((key: string, node: HTMLDivElement | null) => {
     if (node) {
