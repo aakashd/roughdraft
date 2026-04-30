@@ -7,8 +7,8 @@ import path from "node:path";
 import fs from "node:fs";
 import {
   ROUGHDRAFT_DEFAULT_PORT,
-  ROUGHDRAFT_LOOPBACK_HOSTS,
   ROUGHDRAFT_PUBLIC_HOST,
+  resolveBindHosts,
 } from "./network.js";
 import { resolveUpdateStatus } from "./update-status.js";
 
@@ -800,8 +800,10 @@ export async function createServer(
   const { app } = createApp({ port, projectDir });
   const listeningHosts: string[] = [];
 
+  const bindHosts = resolveBindHosts();
+
   await Promise.all(
-    ROUGHDRAFT_LOOPBACK_HOSTS.map(
+    bindHosts.map(
       (host) =>
         new Promise<void>((resolve, reject) => {
           const server = createHttpServer(app);
@@ -827,7 +829,9 @@ export async function createServer(
   );
 
   if (listeningHosts.length === 0) {
-    throw new Error("Roughdraft could not bind to any loopback interface.");
+    throw new Error(
+      `Roughdraft could not bind to any host (tried: ${bindHosts.join(", ")}).`,
+    );
   }
 
   console.log(
