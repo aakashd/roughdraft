@@ -15,3 +15,9 @@ State handling must remain deterministic and testable. Stale-write protection an
 ## What This Explicitly Does Not Mean
 
 The state file is not a project database, collaboration backend, sync system, or persistent document model.
+
+## Clarification (2026-04-30): Remote Document Sessions
+
+Remote document mode (see `docs/plans/2026-04-30-001-feat-remote-document-mode-plan.md`) introduces in-memory session state on the server: a map of registered remote-document sessions, each holding a CLI-supplied markdown file's bytes for the lifetime of the SSE connection.
+
+This state is **deliberately not persisted in the state file**. Sessions live only in the running server process and are evicted on disconnect or server restart. The state file's role — managed background process, port, URL, start time — is unchanged. Treating remote-document sessions as transient in-memory state preserves the boundary above: the state file does not become a document model just because the server now hosts other machines' edits.
