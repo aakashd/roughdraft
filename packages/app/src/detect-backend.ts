@@ -3,6 +3,13 @@ import { ApiBackend } from "./api-backend";
 import { LocalStorageBackend } from "./local-storage-backend";
 import { RemoteBackend } from "./remote-backend";
 
+interface StatusPayload {
+  backend?: string;
+  projectDir?: string;
+  stateless?: boolean;
+  capabilities?: { remoteDocuments?: boolean };
+}
+
 export async function detectBackend(): Promise<StorageBackend> {
   if (import.meta.env.VITE_PREVIEW_WEB === "1") {
     return new LocalStorageBackend();
@@ -11,38 +18,39 @@ export async function detectBackend(): Promise<StorageBackend> {
   const sessionId = readSessionIdFromUrl();
   const token = readTokenFromUrl();
 
+  let statusPayload: StatusPayload | null = null;
+
   try {
     const res = await fetch("/api/status");
     if (res.ok) {
-      const payload = (await res.json()) as {
-        backend?: string;
-        projectDir?: string;
-        stateless?: boolean;
-        capabilities?: { remoteDocuments?: boolean };
-      };
-
-      if (sessionId && payload.capabilities?.remoteDocuments) {
-        try {
-          return await RemoteBackend.create(sessionId, token);
-        } catch (error) {
-          console.error("Could not initialize remote backend:", error);
-        }
-      }
-
-      if (payload.backend === "local-files") {
-        return new ApiBackend({
-          kind: "local-files",
-          label: "Local files",
-          detail: payload.stateless
-            ? "Open a markdown file"
-            : "Markdown file on disk",
-          projectPath: payload.projectDir,
-        });
-      }
+      statusPayload = (await res.json()) as StatusPayload;
     }
   } catch {
     // network error — no server available
   }
+
+  if (statusPayload) {
+    if (sessionId && statusPayload.capabilities?.remoteDocuments) {
+      try {
+        return await RemoteBackend.create(sessionId, token);
+      } catch (error) {
+        console.error("Could not initialize remote backend:", error);
+        throw error;
+      }
+    }
+
+    if (statusPayload.backend === "local-files") {
+      return new ApiBackend({
+        kind: "local-files",
+        label: "Local files",
+        detail: statusPayload.stateless
+          ? "Open a markdown file"
+          : "Markdown file on disk",
+        projectPath: statusPayload.projectDir,
+      });
+    }
+  }
+
   return new LocalStorageBackend();
 }
 

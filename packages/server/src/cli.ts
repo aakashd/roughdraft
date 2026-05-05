@@ -978,15 +978,18 @@ async function runRemoteOpen(
   }
 
   const SSE_CONNECT_TIMEOUT_MS = 10_000;
+  const eventsUrl = new URL(
+    `/api/remote-document/${encodeURIComponent(sessionId)}/events`,
+    baseUrl,
+  );
+  eventsUrl.searchParams.set("role", "cli");
+
   let eventsResponse: Response;
   try {
-    eventsResponse = await deps.fetchImpl(
-      `${baseUrl}/api/remote-document/${encodeURIComponent(sessionId)}/events`,
-      {
-        headers: { Accept: "text/event-stream", ...authHeaders },
-        signal: AbortSignal.timeout(SSE_CONNECT_TIMEOUT_MS),
-      },
-    );
+    eventsResponse = await deps.fetchImpl(eventsUrl.toString(), {
+      headers: { Accept: "text/event-stream", ...authHeaders },
+      signal: AbortSignal.timeout(SSE_CONNECT_TIMEOUT_MS),
+    });
   } catch (error) {
     deps.error(
       `Lost connection to remote host: ${

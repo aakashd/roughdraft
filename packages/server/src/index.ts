@@ -85,7 +85,8 @@ interface RemoteSession {
   originPath: string;
   content: string;
   version: string;
-  client: Response | null;
+  saveClient: Response | null;
+  viewers: Set<Response>;
   disconnectedAt: number | null;
 }
 
@@ -123,6 +124,14 @@ function remoteSessionView(session: RemoteSession): {
     content: session.content,
     version: session.version,
   };
+}
+
+function writeRemoteSessionEvent(
+  response: Response,
+  event: string,
+  data: unknown,
+): void {
+  response.write(`event: ${event}\ndata: ${JSON.stringify(data)}\n\n`);
 }
 
 function listMdFiles(projectDir: string): string[] {
@@ -398,15 +407,21 @@ export function createApp(options: CreateAppOptions = {}): CreateAppResult {
       if (supplied === remoteDocumentToken) return true;
     }
 
+    const acceptsQueryToken =
+      req.method === "GET" &&
+      req.path.startsWith("/api/remote-document/") &&
+      req.path.endsWith("/events");
     const queryToken =
-      typeof req.query.token === "string" ? req.query.token : "";
+      acceptsQueryToken && typeof req.query.token === "string"
+        ? req.query.token
+        : "";
     return queryToken === remoteDocumentToken;
   }
 
   function rejectUnauthorizedRemoteDocumentRequest(res: Response): void {
     res.status(401).json({
       error:
-        "Remote document endpoints require a valid token. Set ROUGHDRAFT_TOKEN on the client or include ?token=... in the URL.",
+        "Remote document endpoints require a valid token. Set ROUGHDRAFT_TOKEN on the client; browser event streams may include ?token=... in the URL.",
     });
   }
 
@@ -768,7 +783,8 @@ export function createApp(options: CreateAppOptions = {}): CreateAppResult {
       originPath,
       content,
       version: remoteSessionVersion(content),
-      client: null,
+      saveClient: null,
+      viewers: new Set<Response>(),
       disconnectedAt: null,
     };
     remoteSessions.set(sessionId, session);
@@ -834,17 +850,15 @@ export function createApp(options: CreateAppOptions = {}): CreateAppResult {
     session.version = remoteSessionVersion(content);
 
     let deliveredToClient = true;
-    if (session.client) {
+    if (session.saveClient) {
       try {
-        session.client.write(
-          `event: save\ndata: ${JSON.stringify({
-            content: session.content,
-            version: session.version,
-          })}\n\n`,
-        );
+        writeRemoteSessionEvent(session.saveClient, "save", {
+          content: session.content,
+          version: session.version,
+        });
       } catch {
         deliveredToClient = false;
-        session.client = null;
+        session.saveClient = null;
         session.disconnectedAt = Date.now();
       }
     } else {
@@ -873,24 +887,45 @@ export function createApp(options: CreateAppOptions = {}): CreateAppResult {
       return;
     }
 
+    const role = req.query.role === "viewer" ? "viewer" : "cli";
+
     res.setHeader("Content-Type", "text/event-stream");
     res.setHeader("Cache-Control", "no-cache, no-transform");
     res.setHeader("Connection", "keep-alive");
     res.flushHeaders?.();
 
-    if (session.client) {
-      session.client.end();
-    }
+    if (role === "cli") {
+      if (session.saveClient) {
+        session.saveClient.end();
+      }
 
-    session.client = res;
-    session.disconnectedAt = null;
+      session.saveClient = res;
+      session.disconnectedAt = null;
 
-    res.write(
-      `event: connected\ndata: ${JSON.stringify({
+      writeRemoteSessionEvent(res, "connected", {
         id: session.id,
+        role,
         version: session.version,
-      })}\n\n`,
-    );
+      });
+      for (const viewer of session.viewers) {
+        writeRemoteSessionEvent(viewer, "connected", {
+          id: session.id,
+          role: "viewer",
+          version: session.version,
+        });
+      }
+    } else {
+      session.viewers.add(res);
+      writeRemoteSessionEvent(
+        res,
+        session.saveClient ? "connected" : "disconnected",
+        {
+          id: session.id,
+          role,
+          version: session.version,
+        },
+      );
+    }
 
     const keepAlive = setInterval(() => {
       res.write(": keep-alive\n\n");
@@ -898,9 +933,18 @@ export function createApp(options: CreateAppOptions = {}): CreateAppResult {
 
     req.on("close", () => {
       clearInterval(keepAlive);
-      if (session.client === res) {
-        session.client = null;
+      if (role === "cli" && session.saveClient === res) {
+        session.saveClient = null;
         session.disconnectedAt = Date.now();
+        for (const viewer of session.viewers) {
+          writeRemoteSessionEvent(viewer, "disconnected", {
+            id: session.id,
+            role: "viewer",
+            version: session.version,
+          });
+        }
+      } else if (role === "viewer") {
+        session.viewers.delete(res);
       }
     });
   });

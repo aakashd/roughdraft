@@ -597,7 +597,7 @@ describe("createApp", () => {
     expect(put.status).toBe(404);
   });
 
-  it("rejects remote-document register without a valid token when a token is configured", async () => {
+  it("requires a bearer token on remote-document JSON routes when a token is configured", async () => {
     const { app } = createApp({
       homeDir,
       staticDirPath: projectDir,
@@ -621,6 +621,16 @@ describe("createApp", () => {
       });
     expect(wrongToken.status).toBe(401);
 
+    const queryToken = await request(app)
+      .post("/api/remote-document")
+      .query({ token: "secret-token" })
+      .send({
+        sessionId: "auth-1",
+        originPath: "/work/a.md",
+        content: "x",
+      });
+    expect(queryToken.status).toBe(401);
+
     const ok = await request(app)
       .post("/api/remote-document")
       .set("Authorization", "Bearer secret-token")
@@ -630,6 +640,27 @@ describe("createApp", () => {
         content: "x",
       });
     expect(ok.status).toBe(201);
+
+    const getWithQueryToken = await request(app)
+      .get("/api/remote-document/auth-1")
+      .query({ token: "secret-token" });
+    expect(getWithQueryToken.status).toBe(401);
+
+    const getWithHeader = await request(app)
+      .get("/api/remote-document/auth-1")
+      .set("Authorization", "Bearer secret-token");
+    expect(getWithHeader.status).toBe(200);
+
+    const putWithQueryToken = await request(app)
+      .put("/api/remote-document/auth-1")
+      .query({ token: "secret-token" })
+      .send({ content: "mutated" });
+    expect(putWithQueryToken.status).toBe(401);
+
+    const unchanged = await request(app)
+      .get("/api/remote-document/auth-1")
+      .set("Authorization", "Bearer secret-token");
+    expect(unchanged.body.content).toBe("x");
   });
 
   it("accepts ?token= query for the SSE endpoint when a token is configured", async () => {
@@ -644,13 +675,23 @@ describe("createApp", () => {
       .set("Authorization", "Bearer secret-token")
       .send({ sessionId: "sse-auth", originPath: "/a.md", content: "x" });
 
-    const noToken = await request(app).get("/api/remote-document/sse-auth");
-    expect(noToken.status).toBe(401);
+    const server = app.listen(0);
+    try {
+      const port = (server.address() as AddressInfo).port;
 
-    const queryToken = await request(app)
-      .get("/api/remote-document/sse-auth")
-      .query({ token: "secret-token" });
-    expect(queryToken.status).toBe(200);
+      const noToken = await fetch(
+        `http://127.0.0.1:${port}/api/remote-document/sse-auth/events?role=viewer`,
+      );
+      expect(noToken.status).toBe(401);
+
+      const queryToken = await fetch(
+        `http://127.0.0.1:${port}/api/remote-document/sse-auth/events?role=viewer&token=secret-token`,
+      );
+      expect(queryToken.status).toBe(200);
+      await queryToken.body?.cancel();
+    } finally {
+      await new Promise<void>((resolve) => server.close(() => resolve()));
+    }
   });
 
   it("advertises whether a remote-document token is required in /api/status", async () => {

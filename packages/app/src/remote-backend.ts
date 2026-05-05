@@ -174,6 +174,7 @@ export class RemoteBackend implements StorageBackend {
       `/api/remote-document/${encodeURIComponent(sessionId)}/events`,
       window.location.origin,
     );
+    eventsUrl.searchParams.set("role", "viewer");
     if (this.token.length > 0) {
       eventsUrl.searchParams.set("token", this.token);
     }

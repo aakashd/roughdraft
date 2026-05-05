@@ -4,9 +4,11 @@ import { MarkdownFileConflictError } from "./storage";
 
 describe("RemoteBackend", () => {
   const originalFetch = global.fetch;
+  const originalEventSource = global.EventSource;
 
   afterEach(() => {
     global.fetch = originalFetch;
+    global.EventSource = originalEventSource;
     vi.restoreAllMocks();
   });
 
@@ -195,5 +197,74 @@ describe("RemoteBackend", () => {
       backend as unknown as { setSessionStatus: (s: string) => void }
     ).setSessionStatus("connected");
     expect(events).toEqual(["disconnected", "connected", "disconnected"]);
+  });
+
+  it("watchMarkdownFile opens a viewer event stream with the token in the query string", () => {
+    const instances: Array<{
+      url: string;
+      listeners: Record<string, Array<(event: Event) => void>>;
+      readyState: number;
+      close: () => void;
+    }> = [];
+
+    class FakeEventSource {
+      static CLOSED = 2;
+      url: string;
+      listeners: Record<string, Array<(event: Event) => void>> = {};
+      readyState = 1;
+      onerror: ((event: Event) => void) | null = null;
+
+      constructor(url: string) {
+        this.url = url;
+        instances.push(this);
+      }
+
+      addEventListener(type: string, listener: (event: Event) => void) {
+        this.listeners[type] ??= [];
+        this.listeners[type].push(listener);
+      }
+
+      close() {
+        this.readyState = FakeEventSource.CLOSED;
+      }
+    }
+
+    global.EventSource = FakeEventSource as unknown as typeof EventSource;
+
+    const backend = new RemoteBackend(
+      {
+        kind: "remote",
+        label: "Remote document",
+        detail: "draft.md",
+        sessionId: "session-1",
+        originPath: "/work/draft.md",
+      },
+      {
+        id: "session-1",
+        originPath: "/work/draft.md",
+        content: "v1",
+        version: "version-1",
+      },
+      "secret-token",
+    );
+
+    const statuses: string[] = [];
+    backend.onSessionStatusChange((status) => statuses.push(status));
+
+    const stopWatching = backend.watchMarkdownFile("ignored.md", () => {});
+    expect(instances).toHaveLength(1);
+
+    const eventsUrl = new URL(instances[0].url);
+    expect(eventsUrl.pathname).toBe("/api/remote-document/session-1/events");
+    expect(eventsUrl.searchParams.get("role")).toBe("viewer");
+    expect(eventsUrl.searchParams.get("token")).toBe("secret-token");
+
+    instances[0].listeners.connected?.forEach((listener) => {
+      listener(new Event("connected"));
+    });
+    expect(statuses).toEqual(["disconnected", "connected"]);
+
+    stopWatching();
+    expect(statuses).toEqual(["disconnected", "connected", "disconnected"]);
   });
 });
