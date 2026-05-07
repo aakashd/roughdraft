@@ -36,7 +36,7 @@ A comment is written as:
 comment = "{>>" comment-text "<<}" [ metadata ]
 ```
 
-Comment text is plain inline Markdown content. Comment text MUST NOT contain the literal closing delimiter `<<}` unless the implementation defines an escaping extension.
+Comment text is plain inline Markdown content. Comment text MUST NOT contain the literal closing delimiter `<<}` unless the implementation defines an escaping extension. Writers that do not implement escaping MUST reject comment or reply text containing raw CriticMarkup close delimiters instead of emitting ambiguous review markup.
 
 A comment MAY appear by itself when the feedback applies to the surrounding paragraph or document:
 

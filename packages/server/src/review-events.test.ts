@@ -114,6 +114,27 @@ describe("ReviewEventQueue", () => {
     vi.useRealTimers();
   });
 
+  it("does not time out after a matching event arrives during a longer batch window", async () => {
+    vi.useFakeTimers();
+    const queue = new ReviewEventQueue();
+    const waiting = queue.wait({
+      documentPath: "/tmp/project/draft.md",
+      timeoutMs: 100,
+      batchWindowMs: 200,
+    });
+
+    await vi.advanceTimersByTimeAsync(50);
+    const emitted = queue.emit(eventInput("/tmp/project/draft.md"));
+    await vi.advanceTimersByTimeAsync(200);
+
+    await expect(waiting).resolves.toMatchObject({
+      timedOut: false,
+      events: [emitted.event],
+    });
+    expect(emitted.delivered).toBe(true);
+    vi.useRealTimers();
+  });
+
   it("prunes retained events deterministically", async () => {
     const queue = new ReviewEventQueue();
 

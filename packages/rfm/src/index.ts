@@ -81,6 +81,8 @@ interface Metadata {
   endOffset: number;
 }
 
+const CRITICMARKUP_CLOSE_DELIMITER_PATTERN = /<<}|\+\+}|--}|~~}|==}/;
+
 interface IdReference {
   id: string;
   kind: "comment" | "suggestion";
@@ -463,6 +465,8 @@ export function appendRoughdraftReply(
   markdown: string,
   options: AppendRoughdraftReplyOptions,
 ): string {
+  assertSafeCommentBodyText(options.message);
+
   const index = extractRoughdraftReviewIndex(markdown);
   const parent = index.items.find((item) => item.id === options.parentId);
   if (!parent) {
@@ -477,6 +481,15 @@ export function appendRoughdraftReply(
   })}`;
 
   return `${markdown.slice(0, parent.endOffset)}${reply}${markdown.slice(parent.endOffset)}`;
+}
+
+function assertSafeCommentBodyText(message: string): void {
+  const match = message.match(CRITICMARKUP_CLOSE_DELIMITER_PATTERN);
+  if (!match) return;
+
+  throw new Error(
+    `Reply text contains CriticMarkup close delimiter "${match[0]}". Rewrite the reply without raw CriticMarkup delimiters.`,
+  );
 }
 
 export function markRoughdraftResolved(

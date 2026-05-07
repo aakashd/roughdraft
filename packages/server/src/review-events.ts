@@ -144,6 +144,11 @@ export class ReviewEventQueue {
   private scheduleResolve(waiter: Waiter): void {
     if (waiter.batchTimeout) return;
 
+    if (waiter.timeout) {
+      clearTimeout(waiter.timeout);
+      waiter.timeout = null;
+    }
+
     waiter.batchTimeout = setTimeout(() => {
       this.resolveWaiter(waiter, false);
     }, waiter.options.batchWindowMs);

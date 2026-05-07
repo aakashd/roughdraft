@@ -66,6 +66,11 @@ interface DevFrontendState {
   url: string;
 }
 
+interface LiveDevFrontend {
+  frontendUrl: string;
+  apiUrl: string | null;
+}
+
 export interface SpawnedServer {
   pid: number;
 }
@@ -158,6 +163,7 @@ interface ParsedWatchOptions {
   json: boolean;
   positionals: string[];
   replay: boolean;
+  serverUrl?: string;
   stateDir?: string;
   stateFile?: string;
   timeoutSeconds?: number;
@@ -1524,7 +1530,7 @@ async function waitForServerToStop(
 
 async function resolveLiveDevFrontendBaseUrl(
   deps: CliDependencies,
-): Promise<string | null> {
+): Promise<LiveDevFrontend | null> {
   const state = readDevFrontendStateFromDisk(
     getDevFrontendStateFilePath(deps.env),
   );
@@ -1583,7 +1589,13 @@ async function resolveLiveDevFrontendBaseUrl(
     frontendUrl.pathname = "/";
     frontendUrl.search = "";
     frontendUrl.hash = "";
-    return frontendUrl.toString();
+    return {
+      frontendUrl: frontendUrl.toString(),
+      apiUrl:
+        mode === "full-dev" && state.apiPort !== null
+          ? buildPublicBaseUrl(state.apiPort)
+          : null,
+    };
   } catch {
     return null;
   }
@@ -2009,9 +2021,13 @@ async function runWatch(
   json: boolean,
 ): Promise<number> {
   const target = resolveTargetPath(targetPath);
-  const result = await ensureServerRunning(deps, {
-    projectDir: target.projectDir,
-  });
+  let serverUrl = options.serverUrl;
+  if (!serverUrl) {
+    const result = await ensureServerRunning(deps, {
+      projectDir: target.projectDir,
+    });
+    serverUrl = result.server.url;
+  }
   const relativePath = path.relative(target.projectDir, target.openPath);
   const body: {
     projectPath: string;
@@ -2030,7 +2046,7 @@ async function runWatch(
   }
 
   const response = await deps.fetchImpl(
-    new URL("/api/review-events/watch", result.server.url),
+    new URL("/api/review-events/watch", serverUrl),
     {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -2618,12 +2634,12 @@ export async function runCli(
         });
       }
 
-      const liveDevFrontendUrl = await resolveLiveDevFrontendBaseUrl(deps);
+      const liveDevFrontend = await resolveLiveDevFrontendBaseUrl(deps);
       let result: EnsureRunningResult | null = null;
       let baseUrl: string;
 
-      if (liveDevFrontendUrl) {
-        baseUrl = liveDevFrontendUrl;
+      if (liveDevFrontend) {
+        baseUrl = liveDevFrontend.frontendUrl;
       } else {
         result = await ensureServerRunning(deps, { projectDir });
         baseUrl = buildPublicBaseUrl(result.server.port);
@@ -2678,6 +2694,7 @@ export async function runCli(
           json,
           positionals: [target],
           replay: options.replay,
+          serverUrl: liveDevFrontend?.apiUrl ?? undefined,
           stateDir: options.stateDir,
           stateFile: options.stateFile,
           timeoutSeconds: options.timeoutSeconds,

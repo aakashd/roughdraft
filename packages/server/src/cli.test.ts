@@ -518,6 +518,105 @@ describe("cli", () => {
     );
   });
 
+  it("posts the default open watcher to the dev API behind the live frontend", async () => {
+    const documentPath = path.join(projectDir, "draft.md");
+    fs.writeFileSync(documentPath, "# Draft\n");
+    fs.writeFileSync(
+      devFrontendStateFile,
+      `${JSON.stringify(
+        {
+          apiPort: 3000,
+          appPort: 5173,
+          mode: "full-dev",
+          repoRoot: serverRoot,
+          startedAt: new Date().toISOString(),
+          url: "http://localhost:5173",
+        },
+        null,
+        2,
+      )}\n`,
+    );
+
+    let lastOpenedUrl: string | null = null;
+    let watchUrl: string | null = null;
+    let spawnCount = 0;
+
+    const deps = createCliDependencies({
+      env: {
+        ...process.env,
+        ROUGHDRAFT_STATE_DIR: stateDir,
+        ROUGHDRAFT_DEV_FRONTEND_STATE_FILE: devFrontendStateFile,
+      },
+      cwd: projectDir,
+      fetchImpl: async (input, _init) => {
+        const url =
+          input instanceof URL
+            ? input
+            : new URL(
+                typeof input === "string" ? input : input.url,
+                "http://localhost",
+              );
+
+        if (url.pathname === "/api/status" && url.port === "5173") {
+          return new Response(
+            JSON.stringify({
+              backend: "local-files",
+              port: 3000,
+              projectDir,
+              serverRoot,
+            }),
+            {
+              status: 200,
+              headers: { "Content-Type": "application/json" },
+            },
+          );
+        }
+
+        if (url.pathname === "/api/review-events/watch") {
+          watchUrl = url.toString();
+          return new Response(
+            JSON.stringify({
+              events: [{ documentPath, type: "review.completed" }],
+              timedOut: false,
+              nextSequence: 2,
+            }),
+            {
+              status: 200,
+              headers: { "Content-Type": "application/json" },
+            },
+          );
+        }
+
+        throw new Error(`Unexpected request: ${url.toString()}`);
+      },
+      spawnServerProcess: async () => {
+        spawnCount += 1;
+        throw new Error("should not spawn");
+      },
+      isProcessRunning: () => false,
+      stopProcess: async () => {},
+      openUrl: (url) => {
+        lastOpenedUrl = url;
+        return "disabled";
+      },
+      log: () => {},
+      error: () => {},
+      resolveUpdateStatus: noUpdateStatus,
+    });
+
+    const exitCode = await runCli(
+      ["open", documentPath, "--json", "--batch-window", "0"],
+      deps,
+    );
+
+    expect(exitCode).toBe(0);
+    expect(spawnCount).toBe(0);
+    expect(lastOpenedUrl).toBe(
+      expectedOpenUrl("http://localhost:5173", documentPath),
+    );
+    expect(watchUrl).toBe("http://localhost:3000/api/review-events/watch");
+  });
+
   it("falls back to the api server URL when the dev frontend hint is stale", async () => {
     const documentPath = path.join(projectDir, "draft.md");
     fs.writeFileSync(documentPath, "# Draft\n");

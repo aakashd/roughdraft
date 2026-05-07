@@ -197,6 +197,21 @@ describe("RFM mutation helpers", () => {
     );
   });
 
+  it("rejects reply text that would close CriticMarkup early", () => {
+    const markdown =
+      '{>>Needs proof<<}{id="c1" by="user" at="2026-04-28T12:00:00.000Z"}\n';
+
+    expect(() =>
+      appendRoughdraftReply(markdown, {
+        parentId: "c1",
+        id: "c2",
+        author: "AI",
+        at: "2026-04-28T12:10:00.000Z",
+        message: "This closes early <<} and corrupts the thread.",
+      }),
+    ).toThrow(/CriticMarkup close delimiter/);
+  });
+
   it("marks a target resolved without changing unrelated markup", () => {
     const markdown =
       'Add {++one example++}{id="s1" by="AI" at="2026-04-28T12:05:00.000Z"} and keep {>>open question<<}{id="c1" by="user" at="2026-04-28T12:06:00.000Z"}.\n';
