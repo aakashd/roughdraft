@@ -919,15 +919,27 @@ function RoughdraftPopupMock({ workflowStage }: { workflowStage: number }) {
       data-popup-visible={visible ? "true" : "false"}
       data-testid="homepage-workflow-popup"
     >
-      <div className="flex h-10 items-center justify-between gap-4 border-b border-slate-200 bg-white px-4 text-xs font-bold text-stone-500 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-400 max-[520px]:px-3">
+      <div
+        className="flex h-10 items-center justify-between gap-4 border-b border-slate-200 bg-white px-4 text-xs font-bold text-stone-500 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-400 max-[520px]:px-3"
+        data-testid="homepage-workflow-popup-header"
+      >
         <div
           className="flex items-center gap-1.5"
           aria-hidden="true"
           data-testid="homepage-workflow-popup-traffic-lights"
         >
-          <span className="inline-flex size-[0.65rem] rounded-full bg-rose-500" />
-          <span className="inline-flex size-[0.65rem] rounded-full bg-amber-400" />
-          <span className="inline-flex size-[0.65rem] rounded-full bg-emerald-500" />
+          <span
+            className="inline-flex size-[0.65rem] rounded-full bg-rose-500"
+            data-testid="homepage-workflow-popup-traffic-light"
+          />
+          <span
+            className="inline-flex size-[0.65rem] rounded-full bg-amber-400"
+            data-testid="homepage-workflow-popup-traffic-light"
+          />
+          <span
+            className="inline-flex size-[0.65rem] rounded-full bg-emerald-500"
+            data-testid="homepage-workflow-popup-traffic-light"
+          />
         </div>
         <div className="flex min-w-0 items-center gap-1.5">
           <FileText className="size-3.5 shrink-0" aria-hidden="true" />

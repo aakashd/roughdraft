@@ -124,12 +124,11 @@ test.describe("homepage workflow storyboard", () => {
     await expect(
       roughdraftPopup
         .getByTestId("homepage-workflow-popup-traffic-lights")
-        .locator("span"),
+        .getByTestId("homepage-workflow-popup-traffic-light"),
     ).toHaveCount(3);
-    await expect(roughdraftPopup.locator("> div").first()).toHaveCSS(
-      "background-color",
-      "rgb(255, 255, 255)",
-    );
+    await expect(
+      roughdraftPopup.getByTestId("homepage-workflow-popup-header"),
+    ).toHaveCSS("background-color", "rgb(255, 255, 255)");
     await expect(
       storyboard.getByTestId("homepage-workflow-document-title"),
     ).toBeVisible();
