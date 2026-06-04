@@ -433,12 +433,14 @@
   .tiptap table {
     @apply table-fixed border-collapse;
     /* biome-ignore lint/complexity/noImportantStyles: override Tiptap inline min-width */
-    min-width: 100% !important;
+    /* fixed layout at full column width: prose cells wrap so every column
+       stays visible in the reading column instead of overflowing off-screen */
+    width: 100% !important;
   }
 
   .tiptap th,
   .tiptap td {
-    @apply relative min-w-[1em] border border-slate-200 dark:border-slate-700 px-3 py-2 text-left align-top;
+    @apply relative min-w-[1em] border border-slate-200 dark:border-slate-700 px-3 py-2 text-left align-top break-words;
   }
 
   .tiptap th {
