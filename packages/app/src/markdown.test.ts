@@ -140,6 +140,15 @@ describe("normalizeBlockSpacing", () => {
 
     expect(toMarkdown(html)).toBe("- Alpha\n- Beta\n");
   });
+
+  it("serializes thematic breaks as --- so they round-trip without churn", () => {
+    const withRule = "Before.\n\n---\n\nAfter.\n";
+
+    const serialized = toMarkdown(toHtml(withRule));
+    expect(serialized).toContain("\n---\n");
+    expect(serialized).not.toContain("* * *");
+    expect(serialized).toBe(withRule);
+  });
 });
 
 describe("toMarkdown", () => {

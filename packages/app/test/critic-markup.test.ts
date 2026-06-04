@@ -157,7 +157,7 @@ describe("CriticMarkup comments", () => {
 
     expect(endmatter).toBeNull();
     expect(comments.size).toBe(0);
-    expect(output).toContain("* * *");
+    expect(output).toContain("\n---\n");
     expect(output).toContain("```yaml");
     expect(output).toContain("comments:");
     expect(output).toContain("suggestions:");

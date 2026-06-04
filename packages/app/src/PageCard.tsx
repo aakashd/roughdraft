@@ -1215,7 +1215,14 @@ const RichTextEditorSurface = memo(function RichTextEditorSurface({
           return true;
         },
       },
-      onUpdate: ({ editor: currentEditor }) => {
+      onUpdate: ({ editor: currentEditor, transaction }) => {
+        // A transaction that does not change the document — the no-op
+        // transaction ProseMirror dispatches on initial mount, or a pure
+        // selection/metadata change — must never trigger a re-serialize and
+        // autosave. Otherwise merely opening a file rewrites it on disk with
+        // normalized Markdown the reader never asked for.
+        if (!transaction.docChanged) return;
+
         if (suppressNextMarkdownUpdateRef.current) {
           suppressNextMarkdownUpdateRef.current = false;
           return;

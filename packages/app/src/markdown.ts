@@ -381,6 +381,7 @@ export function createTurndownService(): TurndownService {
     headingStyle: "atx",
     codeBlockStyle: "fenced",
     bulletListMarker: "-",
+    hr: "---",
     blankReplacement(_content, node) {
       if (node.hasAttribute(rawMarkdownBlockAttribute)) {
         return `\n\n${decodeRawMarkdownBlock(
