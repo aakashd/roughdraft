@@ -32,6 +32,7 @@ import { cn } from "./lib/utils";
 import { MarkdownCodeEditor } from "./MarkdownCodeEditor";
 import { buildLocationForLinkedMarkdownDocument } from "./app-navigation";
 import { toHtml } from "./markdown";
+import { mergeSourcePreserving } from "./source-preserving-merge";
 import type { Page, StorageBackend } from "./storage";
 import { useCommentAnchorLayout } from "./useCommentAnchorLayout";
 
@@ -652,6 +653,25 @@ const RichTextEditorSurface = memo(function RichTextEditorSurface({
   const frontmatterRef = useRef<string | null>(parsedContent.frontmatter);
   const endmatterRef = useRef<string | null>(parsedContent.endmatter);
 
+  // The source as loaded (author's formatting) and the editor's own
+  // serialization of that unchanged source. Together they let a save restore
+  // verbatim formatting for every block the reader didn't touch — see
+  // mergeSourcePreserving.
+  const sourceMarkdownRef = useRef(sourceMarkdown);
+  const baseSerialization = useMemo(
+    () =>
+      editorStateToCriticMarkdown(parsedContent.doc, parsedContent.comments, {
+        frontmatter: parsedContent.frontmatter,
+        endmatter: parsedContent.endmatter,
+      }),
+    [parsedContent],
+  );
+  const baseSerializationRef = useRef(baseSerialization);
+  useEffect(() => {
+    sourceMarkdownRef.current = sourceMarkdown;
+    baseSerializationRef.current = baseSerialization;
+  }, [sourceMarkdown, baseSerialization]);
+
   useEffect(() => {
     commentsRef.current = comments;
   }, [comments]);
@@ -672,14 +692,22 @@ const RichTextEditorSurface = memo(function RichTextEditorSurface({
       const currentDoc = doc ?? currentEditor?.getJSON();
       if (!currentDoc) return;
 
+      const edited = editorStateToCriticMarkdown(
+        currentDoc,
+        nextComments ?? commentsRef.current,
+        {
+          frontmatter: frontmatterRef.current,
+          endmatter: endmatterRef.current,
+        },
+      );
+
+      // Persist the author's original formatting for every block the reader
+      // left untouched; only changed blocks take the re-serialized form.
       onMarkdownChange(
-        editorStateToCriticMarkdown(
-          currentDoc,
-          nextComments ?? commentsRef.current,
-          {
-            frontmatter: frontmatterRef.current,
-            endmatter: endmatterRef.current,
-          },
+        mergeSourcePreserving(
+          sourceMarkdownRef.current,
+          baseSerializationRef.current,
+          edited,
         ),
       );
     },
@@ -1299,6 +1327,19 @@ const RichTextEditorSurface = memo(function RichTextEditorSurface({
     if (JSON.stringify(editor.getJSON()) !== JSON.stringify(nextDoc)) {
       editor.commands.setContent(nextDoc, { emitUpdate: false });
     }
+
+    // Capture the merge baseline from the editor's OWN serialization of the
+    // freshly loaded document. Using the editor's getJSON() (rather than the
+    // parsed doc) means an unchanged block serializes byte-identically later,
+    // so only blocks the reader actually edits are treated as changed.
+    baseSerializationRef.current = editorStateToCriticMarkdown(
+      editor.getJSON(),
+      parsedContent.comments,
+      {
+        frontmatter: parsedContent.frontmatter,
+        endmatter: parsedContent.endmatter,
+      },
+    );
 
     refreshCriticChanges();
   }, [editor, parsedContent, refreshCriticChanges]);
