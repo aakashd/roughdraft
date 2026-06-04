@@ -28,7 +28,7 @@ describe("mcp", () => {
     fs.rmSync(tempDir, { recursive: true, force: true });
   });
 
-  it("omits timeoutSeconds from review watch calls unless the tool caller provides one", async () => {
+  it("long-polls review watch in bounded windows, capped by a caller timeout", async () => {
     const requestBodies: Array<Record<string, unknown>> = [];
     const fetchImpl: typeof fetch = async (_input, init) => {
       requestBodies.push(JSON.parse(String(init?.body ?? "{}")));
@@ -51,16 +51,18 @@ describe("mcp", () => {
       fetchImpl,
     );
 
+    // No caller timeout → indefinite wait via the default 25s poll window
+    // (so undici's headers timeout never aborts the request).
     expect(requestBodies[0]).toMatchObject({
       projectPath: projectDir,
       path: "draft.md",
       batchWindowSeconds: 0.25,
       fromNow: true,
+      timeoutSeconds: 25,
     });
-    expect(requestBodies[0]).not.toHaveProperty("timeoutSeconds");
-    expect(requestBodies[1]).toMatchObject({
-      timeoutSeconds: 5,
-    });
+    // A caller timeout caps the window so the total wait honors it.
+    expect(requestBodies[1]?.timeoutSeconds as number).toBeLessThanOrEqual(5);
+    expect(requestBodies[1]?.timeoutSeconds as number).toBeGreaterThan(0);
   });
 
   it("returns overall comments from review watch events unchanged", async () => {
