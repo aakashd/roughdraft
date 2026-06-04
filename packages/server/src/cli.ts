@@ -2117,57 +2117,93 @@ async function runWatch(
     serverUrl = result.server.url;
   }
   const relativePath = path.relative(target.projectDir, target.openPath);
-  const body: {
-    projectPath: string;
-    path: string;
-    timeoutSeconds?: number;
-    batchWindowSeconds: number;
-    fromNow: boolean;
-  } = {
-    projectPath: target.projectDir,
-    path: relativePath,
-    batchWindowSeconds: options.batchWindowSeconds,
-    fromNow: !options.replay,
-  };
-  if (options.timeoutSeconds !== undefined) {
-    body.timeoutSeconds = options.timeoutSeconds;
+  // The server holds the /watch response open until a review-completed event
+  // (or its own timeout). With no per-request timeout the hold is indefinite,
+  // and undici aborts the fetch with UND_ERR_HEADERS_TIMEOUT long before the
+  // user clicks Done Reviewing. So we long-poll in bounded windows: each
+  // request returns within WATCH_POLL_WINDOW_SECONDS, and we re-arm from the
+  // last sequence until a real event arrives. An explicit --timeout caps the
+  // total wait; without one we wait indefinitely across windows.
+  const WATCH_POLL_WINDOW_SECONDS = 25;
+  const overallDeadline =
+    options.timeoutSeconds !== undefined
+      ? Date.now() + options.timeoutSeconds * 1000
+      : undefined;
+
+  let fromNow = !options.replay;
+  let afterSequence: number | undefined;
+
+  while (true) {
+    let windowSeconds = WATCH_POLL_WINDOW_SECONDS;
+    if (overallDeadline !== undefined) {
+      const remainingMs = overallDeadline - Date.now();
+      if (remainingMs <= 0) {
+        const timedOutPayload = { events: [], timedOut: true };
+        if (json) {
+          emitJson(deps.log, timedOutPayload);
+          return 1;
+        }
+        deps.log(`No review completed event received for ${target.openPath}.`);
+        return 1;
+      }
+      windowSeconds = Math.min(WATCH_POLL_WINDOW_SECONDS, remainingMs / 1000);
+    }
+
+    const body: {
+      projectPath: string;
+      path: string;
+      timeoutSeconds: number;
+      batchWindowSeconds: number;
+      fromNow: boolean;
+      afterSequence?: number;
+    } = {
+      projectPath: target.projectDir,
+      path: relativePath,
+      timeoutSeconds: windowSeconds,
+      batchWindowSeconds: options.batchWindowSeconds,
+      fromNow,
+    };
+    if (afterSequence !== undefined) {
+      body.afterSequence = afterSequence;
+    }
+
+    const response = await deps.fetchImpl(
+      new URL("/api/review-events/watch", serverUrl),
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body),
+        signal: AbortSignal.timeout((windowSeconds + 5) * 1000),
+      },
+    );
+
+    if (!response.ok) {
+      throw new Error(`Failed to watch review events: ${response.status}`);
+    }
+
+    const payload = (await response.json()) as {
+      events?: unknown[];
+      timedOut?: boolean;
+      nextSequence?: number;
+    };
+
+    if (!payload.timedOut) {
+      if (json) {
+        emitJson(deps.log, payload);
+        return 0;
+      }
+      deps.log(`Review completed for ${target.openPath}.`);
+      deps.log(`Received ${(payload.events ?? []).length} event(s).`);
+      return 0;
+    }
+
+    // Window elapsed with no event — re-arm from the last observed sequence
+    // (exclusive lower bound) so an event fired between windows isn't missed.
+    fromNow = false;
+    if (typeof payload.nextSequence === "number") {
+      afterSequence = Math.max(0, payload.nextSequence - 1);
+    }
   }
-
-  const response = await deps.fetchImpl(
-    new URL("/api/review-events/watch", serverUrl),
-    {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(body),
-      ...(options.timeoutSeconds !== undefined
-        ? { signal: AbortSignal.timeout((options.timeoutSeconds + 5) * 1000) }
-        : {}),
-    },
-  );
-
-  if (!response.ok) {
-    throw new Error(`Failed to watch review events: ${response.status}`);
-  }
-
-  const payload = (await response.json()) as {
-    events?: unknown[];
-    timedOut?: boolean;
-    nextSequence?: number;
-  };
-
-  if (json) {
-    emitJson(deps.log, payload);
-    return payload.timedOut ? 1 : 0;
-  }
-
-  if (payload.timedOut) {
-    deps.log(`No review completed event received for ${target.openPath}.`);
-    return 1;
-  }
-
-  deps.log(`Review completed for ${target.openPath}.`);
-  deps.log(`Received ${(payload.events ?? []).length} event(s).`);
-  return 0;
 }
 
 function isMarkdownPath(targetPath: string): boolean {

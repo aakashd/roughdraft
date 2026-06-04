@@ -775,6 +775,113 @@ describe("cli", () => {
     expect(watchUrl).toBe("http://localhost:3000/api/review-events/watch");
   });
 
+  it("re-arms the watch long-poll across windows until an event arrives", async () => {
+    const documentPath = path.join(projectDir, "draft.md");
+    fs.writeFileSync(documentPath, "# Draft\n");
+    fs.writeFileSync(
+      devFrontendStateFile,
+      `${JSON.stringify(
+        {
+          apiPort: 3000,
+          appPort: 5173,
+          mode: "full-dev",
+          repoRoot: serverRoot,
+          startedAt: new Date().toISOString(),
+          url: "http://localhost:5173",
+        },
+        null,
+        2,
+      )}\n`,
+    );
+
+    const watchBodies: Array<{
+      fromNow?: boolean;
+      afterSequence?: number;
+      timeoutSeconds?: number;
+    }> = [];
+    let spawnCount = 0;
+
+    const deps = createCliDependencies({
+      env: {
+        ...process.env,
+        ROUGHDRAFT_STATE_DIR: stateDir,
+        ROUGHDRAFT_DEV_FRONTEND_STATE_FILE: devFrontendStateFile,
+      },
+      cwd: projectDir,
+      fetchImpl: async (input, init) => {
+        const url =
+          input instanceof URL
+            ? input
+            : new URL(
+                typeof input === "string" ? input : input.url,
+                "http://localhost",
+              );
+
+        if (url.pathname === "/api/status" && url.port === "5173") {
+          return new Response(
+            JSON.stringify({
+              backend: "local-files",
+              port: 3000,
+              projectDir,
+              serverRoot,
+            }),
+            { status: 200, headers: { "Content-Type": "application/json" } },
+          );
+        }
+
+        if (url.pathname === "/api/review-events/watch") {
+          watchBodies.push(
+            JSON.parse(typeof init?.body === "string" ? init.body : "{}"),
+          );
+          // First window: no event yet (server-side timeout). Second
+          // window: the review-completed event lands.
+          const payload =
+            watchBodies.length === 1
+              ? { events: [], timedOut: true, nextSequence: 3 }
+              : {
+                  events: [{ documentPath, type: "review.completed" }],
+                  timedOut: false,
+                  nextSequence: 4,
+                };
+          return new Response(JSON.stringify(payload), {
+            status: 200,
+            headers: { "Content-Type": "application/json" },
+          });
+        }
+
+        throw new Error(`Unexpected request: ${url.toString()}`);
+      },
+      spawnServerProcess: async () => {
+        spawnCount += 1;
+        throw new Error("should not spawn");
+      },
+      isProcessRunning: () => false,
+      stopProcess: async () => {},
+      openUrl: () => "disabled",
+      log: () => {},
+      error: () => {},
+      resolveUpdateStatus: noUpdateStatus,
+    });
+
+    const exitCode = await runCli(
+      ["open", documentPath, "--json", "--batch-window", "0"],
+      deps,
+    );
+
+    expect(exitCode).toBe(0);
+    expect(spawnCount).toBe(0);
+    expect(watchBodies).toHaveLength(2);
+    // First window starts from "now"; the second re-arms from the last
+    // observed sequence (exclusive lower bound = nextSequence - 1) so an
+    // event fired between windows is never missed.
+    expect(watchBodies[0]).toMatchObject({ fromNow: true, timeoutSeconds: 25 });
+    expect(watchBodies[1]).toMatchObject({
+      fromNow: false,
+      afterSequence: 2,
+      timeoutSeconds: 25,
+    });
+  });
+
   it("falls back to the api server URL when the dev frontend hint is stale", async () => {
     const documentPath = path.join(projectDir, "draft.md");
     fs.writeFileSync(documentPath, "# Draft\n");
@@ -1074,10 +1181,13 @@ describe("cli", () => {
       if (watchRequestBody) break;
       await new Promise((resolve) => setTimeout(resolve, 10));
     }
+    // Without --timeout the client long-polls in bounded 25s windows (so
+    // undici's headersTimeout never aborts the indefinite wait) and re-arms
+    // until a real event arrives, rather than holding one indefinite request.
     expect(watchRequestBody).toMatchObject({
       batchWindowSeconds: 0,
+      timeoutSeconds: 25,
     });
-    expect(watchRequestBody).not.toHaveProperty("timeoutSeconds");
     await fetch(`http://localhost:${persisted?.port}/api/review-events`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
