@@ -20,7 +20,11 @@ describe("tokenize", () => {
       "trailing\n\n\n",
     ];
     for (const md of cases) {
-      expect(tokenize(md).flatMap((t) => t.lines).join("\n")).toBe(md);
+      expect(
+        tokenize(md)
+          .flatMap((t) => t.lines)
+          .join("\n"),
+      ).toBe(md);
     }
   });
 
@@ -29,7 +33,9 @@ describe("tokenize", () => {
     const tokens = tokenize(md);
     expect(tokens.flatMap((t) => t.lines).join("\n")).toBe(md);
     // The fenced block (with its internal blank line) is a single block token.
-    const fenceBlock = tokens.find((t) => t.lines.some((l) => l.startsWith("```")));
+    const fenceBlock = tokens.find((t) =>
+      t.lines.some((l) => l.startsWith("```")),
+    );
     expect(fenceBlock?.lines).toContain("");
   });
 });
@@ -54,7 +60,8 @@ describe("mergeSourcePreserving", () => {
   it("returns the source verbatim when nothing changed", () => {
     const original = "# T\n\nIntro.\n\n| A | B |\n|---|---|\n| 1 | 2 |\n";
     // base is the serializer's normalized form; edited equals base (no edit).
-    const base = "# T\n\nIntro.\n\n| A   | B   |\n| --- | --- |\n| 1   | 2   |\n";
+    const base =
+      "# T\n\nIntro.\n\n| A   | B   |\n| --- | --- |\n| 1   | 2   |\n";
     expect(mergeSourcePreserving(original, base, base)).toBe(original);
   });
 
@@ -123,15 +130,7 @@ describe("mergeSourcePreserving", () => {
       "Outro.",
       "",
     ].join("\n");
-    const base = [
-      "Intro.",
-      "",
-      "- one",
-      "- two",
-      "",
-      "Outro.",
-      "",
-    ].join("\n");
+    const base = ["Intro.", "", "- one", "- two", "", "Outro.", ""].join("\n");
     const edited = [
       "Intro.",
       "",
