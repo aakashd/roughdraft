@@ -714,7 +714,7 @@ export function DocumentWorkspace({
             )}
           >
             <div className="document-page-main w-full max-w-none min-w-0">
-              <div className="flex w-full flex-wrap items-center gap-1.5 px-1">
+              <div className="flex w-full flex-wrap items-center gap-1.5 rounded-[10px] border border-[#E7E2D9] dark:border-slate-700/70 bg-[#FBFAF7]/80 dark:bg-slate-800/40 px-1.5 py-1 shadow-[0_1px_2px_rgba(57,47,38,0.04)]">
                 <Tooltip>
                   <TooltipTrigger
                     render={
@@ -754,6 +754,10 @@ export function DocumentWorkspace({
                   />
                   <TooltipContent>{editorViewModeToggleLabel}</TooltipContent>
                 </Tooltip>
+                <div
+                  className="mx-0.5 h-4 w-px shrink-0 bg-[#E0DACF] dark:bg-slate-700"
+                  aria-hidden="true"
+                />
                 <Popover
                   open={fileCopyMenuOpen}
                   onOpenChange={setFileCopyMenuOpen}

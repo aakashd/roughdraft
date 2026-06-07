@@ -48,7 +48,7 @@ interface CommentEditorListProps {
 export interface CommentActionDefinition {
   key: string;
   label: string;
-  tone?: "neutral" | "danger";
+  tone?: "neutral" | "danger" | "affirmative" | "destructive";
   icon: ReactNode;
   compact?: boolean;
   onClick: (event: MouseEvent) => void;
@@ -343,6 +343,24 @@ const COMMENT_TREE_ROW_GAP = 12;
 const COMMENT_AVATAR_SIZE = 28;
 const COMMENT_AVATAR_CENTER = 16;
 
+// Resting contrast is raised from stone-400 (~2.3:1 on the off-white canvas,
+// below WCAG AA for icons) to stone-500. The two suggestion verbs carry their
+// semantic tone at rest so accept/reject read as the primary decision on a card,
+// rather than being indistinguishable from edit/delete.
+const COMMENT_ACTION_TONE_CLASS: Record<
+  NonNullable<CommentActionDefinition["tone"]>,
+  string
+> = {
+  neutral:
+    "text-stone-500 hover:bg-[#DED8CE]/45 hover:text-stone-700 dark:text-stone-400 dark:hover:bg-slate-700 dark:hover:text-stone-200",
+  danger:
+    "text-stone-500 hover:bg-rose-100 hover:text-rose-700 dark:text-stone-400 dark:hover:bg-rose-900/40 dark:hover:text-rose-400",
+  affirmative:
+    "text-emerald-600 hover:bg-emerald-100 hover:text-emerald-700 dark:text-emerald-400 dark:hover:bg-emerald-900/40 dark:hover:text-emerald-300",
+  destructive:
+    "text-rose-600 hover:bg-rose-100 hover:text-rose-700 dark:text-rose-400 dark:hover:bg-rose-900/40 dark:hover:text-rose-300",
+};
+
 function CommentActionButton({
   label,
   testId,
@@ -354,7 +372,7 @@ function CommentActionButton({
 }: {
   label: string;
   testId?: string;
-  tone?: "neutral" | "danger";
+  tone?: "neutral" | "danger" | "affirmative" | "destructive";
   icon: ReactNode;
   compact?: boolean;
   className?: string;
@@ -371,9 +389,7 @@ function CommentActionButton({
         compact
           ? "rounded-full border border-transparent transition-colors duration-150"
           : "h-7 rounded-full border border-transparent px-2.5 text-[11px] font-medium tracking-[0.08em] uppercase transition-colors duration-150",
-        tone === "danger"
-          ? "text-stone-400 hover:bg-rose-100 hover:text-rose-700 dark:text-stone-500 dark:hover:bg-rose-900/40 dark:hover:text-rose-400"
-          : "text-stone-400 hover:bg-[#DED8CE]/45 hover:text-stone-600 dark:text-stone-500 dark:hover:bg-slate-700 dark:hover:text-stone-300",
+        COMMENT_ACTION_TONE_CLASS[tone],
         className,
       )}
       onPointerDown={(event) => event.stopPropagation()}

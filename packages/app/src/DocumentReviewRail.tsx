@@ -91,6 +91,27 @@ function railLayoutItemStyle(
   return layout === "anchored" ? { top: railTop } : undefined;
 }
 
+// A persistent type-colored spine on the left of every card mirrors its span's
+// color in the document (gold comment / green insertion / rose deletion /
+// amber substitution). It gives a card->anchor mapping that survives without
+// hovering, which the existing hover-brighten link did not.
+const RAIL_CARD_SPINE_CLASS =
+  "relative pl-3 before:pointer-events-none before:absolute before:left-0 before:top-3 before:bottom-3 before:w-[3px] before:rounded-full before:content-['']";
+
+function railSpineColorClass(kind: "comment" | CriticChangeKind): string {
+  switch (kind) {
+    case "addition":
+      return "before:bg-emerald-400 dark:before:bg-emerald-500";
+    case "deletion":
+      return "before:bg-rose-400 dark:before:bg-rose-500";
+    case "substitution-old":
+    case "substitution-new":
+      return "before:bg-amber-400 dark:before:bg-amber-500";
+    default:
+      return "before:bg-[#FFD000] dark:before:bg-amber-400";
+  }
+}
+
 function getSuggestionPreview(suggestion: CriticChangeRailItem) {
   const oldText = suggestion.oldText.trim();
   const newText = suggestion.newText.trim();
@@ -440,6 +461,8 @@ export function DocumentReviewRail({
                 data-comment-thread-container="true"
                 className={cn(
                   railLayoutItemClass(railLayout),
+                  RAIL_CARD_SPINE_CLASS,
+                  railSpineColorClass("comment"),
                   isSelected
                     ? "border-[#DFDFDC] dark:border-slate-600 bg-white dark:bg-card shadow-[0_20px_48px_rgba(57,47,38,0.14)] dark:shadow-[0_20px_48px_rgba(0,0,0,0.4)]"
                     : "",
@@ -603,6 +626,7 @@ export function DocumentReviewRail({
                   {
                     key: "accept",
                     label: "Accept suggestion",
+                    tone: "affirmative",
                     icon: <Check className="size-3.5" />,
                     compact: true,
                     onClick: (event) => {
@@ -613,7 +637,7 @@ export function DocumentReviewRail({
                   {
                     key: "reject",
                     label: "Reject suggestion",
-                    tone: "danger",
+                    tone: "destructive",
                     icon: <X className="size-3.5" />,
                     compact: true,
                     onClick: (event) => {
@@ -642,6 +666,8 @@ export function DocumentReviewRail({
               data-suggestion-thread-container="true"
               className={cn(
                 railLayoutItemClass(railLayout),
+                RAIL_CARD_SPINE_CLASS,
+                railSpineColorClass(suggestion.kind),
                 isSelected
                   ? "-translate-x-2 border-[#DFDFDC] dark:border-slate-600 bg-white dark:bg-card shadow-[0_20px_48px_rgba(57,47,38,0.14)] dark:shadow-[0_20px_48px_rgba(0,0,0,0.4)]"
                   : "",
