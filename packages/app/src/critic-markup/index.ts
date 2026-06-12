@@ -1387,6 +1387,24 @@ function createCriticMarked(
   return { parser, comments, changes };
 }
 
+// CriticMarkup comment bodies are inline spans, but marked's block lexer splits
+// paragraphs on blank lines before inline tokenizers run. A comment whose body
+// contains a blank line is therefore cut across two blocks, never matches the
+// inline tokenizer, and leaks into the document as raw `{>> ... <<}` text.
+// Collapse blank lines *inside* comment bodies to a single newline so the span
+// stays in one block; the body text is preserved (the hard paragraph break
+// becomes a soft line break, which a re-saved document then keeps in the healed
+// single-newline form). Scoped to comments only — addition/deletion/substitution
+// spans intentionally keep their blank lines, since a multi-paragraph suggestion
+// is meaningful there.
+const criticCommentBodyPattern = /\{>>[\s\S]*?<<\}/g;
+
+function joinBlankLinesInsideComments(markdown: string): string {
+  return markdown.replace(criticCommentBodyPattern, (span) =>
+    span.replace(/(?:\r?\n[ \t]*){2,}/g, "\n"),
+  );
+}
+
 export function criticMarkdownHasReviewRail(
   markdown: string,
   options?: MarkdownOptions,
@@ -1397,7 +1415,9 @@ export function criticMarkdownHasReviewRail(
     options,
     parsedEndmatter,
   );
-  parser.parse(protectRichTextRoundTripMarkdown(body));
+  parser.parse(
+    protectRichTextRoundTripMarkdown(joinBlankLinesInsideComments(body)),
+  );
   addEndmatterFeedback(comments, parsedEndmatter);
   return comments.size > 0 || changes.size > 0;
 }
@@ -1418,7 +1438,9 @@ export function criticMarkdownToRenderedHtml(
     options,
     parsedEndmatter,
   );
-  const html = parser.parse(protectRichTextRoundTripMarkdown(body)) as string;
+  const html = parser.parse(
+    protectRichTextRoundTripMarkdown(joinBlankLinesInsideComments(body)),
+  ) as string;
   addEndmatterFeedback(comments, parsedEndmatter);
 
   return { html, comments, changes, frontmatter, endmatter };
@@ -1436,7 +1458,9 @@ export function criticMarkdownToEditorState(
   const { frontmatter, body, endmatter } = splitYamlDocumentMetadata(markdown);
   const parsedEndmatter = parseReviewEndmatter(endmatter);
   const { parser, comments } = createCriticMarked(options, parsedEndmatter);
-  const html = parser.parse(protectRichTextRoundTripMarkdown(body)) as string;
+  const html = parser.parse(
+    protectRichTextRoundTripMarkdown(joinBlankLinesInsideComments(body)),
+  ) as string;
   const doc = generateJSON(html, extensions) as JSONContent & {
     yamlFrontmatter?: string;
     yamlEndmatter?: string;

@@ -457,6 +457,26 @@ describe("CriticMarkup comments", () => {
     expect(editorStateToCriticMarkdown(doc, comments)).toBe(input);
   });
 
+  it("renders a comment whose body spans a paragraph break", () => {
+    const input =
+      'His input was ops ({==U12 "migrations start from 0"==}{>>Good to add user examples, even when imperfect.\n\nProvide the best examples of what the user has done, even when vibing<<}{id="c2" by="user" at="2026-06-12T13:53:33.663Z"}). Not a register shift.\n';
+
+    const { html, comments } = criticMarkdownToRenderedHtml(input);
+
+    // The comment must be recognized and registered.
+    expect(comments.get("c2")).toMatchObject({
+      id: "c2",
+      authorType: "user",
+      createdAt: "2026-06-12T13:53:33.663Z",
+    });
+    // The anchored text must render as a comment span.
+    expect(html).toContain('data-comment-ids="[&quot;c2&quot;]"');
+    // Raw CriticMarkup must NOT leak into the rendered HTML as literal text.
+    expect(html).not.toContain("{&gt;&gt;");
+    expect(html).not.toContain("&lt;&lt;}");
+    expect(html).not.toContain("{id=&quot;c2&quot;");
+  });
+
   it("preserves inline code nested inside a comment anchor", () => {
     const input =
       'Check {==`roughdraft open`==}{>>Make sure this command is visible<<}{id="cmt-code" by="user" at="2024-01-15T10:31:00.000Z"} before sharing.\n';
