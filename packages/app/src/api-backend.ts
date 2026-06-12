@@ -10,6 +10,8 @@ import {
   type StoredAsset,
 } from "./storage";
 
+import { log } from "./log";
+
 export class ApiBackend implements StorageBackend {
   info: BackendInfo;
   canManageProjects = true;
@@ -98,12 +100,12 @@ export class ApiBackend implements StorageBackend {
       try {
         onChange(JSON.parse((event as MessageEvent<string>).data));
       } catch (error) {
-        console.error("Failed to read markdown file change event:", error);
+        log.error("Failed to read markdown file change event:", error);
       }
     });
 
     source.onerror = (error) => {
-      console.error("Markdown file event stream failed:", error);
+      log.error("Markdown file event stream failed:", error);
     };
 
     return () => {

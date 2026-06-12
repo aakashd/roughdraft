@@ -7,6 +7,8 @@ import {
   type StoredAsset,
 } from "./storage";
 
+import { log } from "./log";
+
 interface RemoteDocumentPayload {
   id: string;
   originPath: string;
@@ -206,7 +208,7 @@ export class RemoteBackend implements StorageBackend {
           });
         }
       } catch (error) {
-        console.error("Failed to read remote save event:", error);
+        log.error("Failed to read remote save event:", error);
       }
     });
 

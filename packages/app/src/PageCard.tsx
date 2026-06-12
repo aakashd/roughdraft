@@ -6,6 +6,7 @@ import { EditorContent, useEditor, useEditorState } from "@tiptap/react";
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import { CommentEditorList } from "./CommentEditorList";
+import { log } from "./log";
 import {
   type CriticChangeAttrs,
   type CriticComment,
@@ -1925,7 +1926,9 @@ const RichTextEditorSurface = memo(function RichTextEditorSurface({
   );
   const documentMainClass = cn(
     "document-page-main w-full min-w-0",
-    layout === "embedded-demo" ? "max-w-none" : "max-w-none",
+    layout === "embedded-demo"
+      ? "max-w-none"
+      : "mx-auto max-w-[min(var(--rd-measure),100%)]",
   );
   const contentInsetClass = layout === "embedded-demo" ? "pb-0" : "pb-24";
   const fallbackClass = cn(
@@ -2075,7 +2078,9 @@ const CodeEditorSurface = memo(function CodeEditorSurface({
   );
   const documentMainClass = cn(
     "document-page-main w-full min-w-0",
-    layout === "embedded-demo" ? "max-w-none" : "max-w-none",
+    layout === "embedded-demo"
+      ? "max-w-none"
+      : "mx-auto max-w-[min(var(--rd-measure),100%)]",
   );
   const contentInsetClass = layout === "embedded-demo" ? "pb-0" : "pb-24";
   const reviewRailClass = cn(
@@ -2203,7 +2208,7 @@ const PageCardEditorSurface = memo(function PageCardEditorSurface({
         );
         return { status: "saved" };
       } catch (error) {
-        console.error("Failed to save page:", error);
+        log.error("Failed to save page:", error);
         onSaveStateChange("error");
         return { status: "error", error };
       }

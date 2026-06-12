@@ -2,6 +2,7 @@ import type { StorageBackend } from "./storage";
 import { ApiBackend } from "./api-backend";
 import { LocalStorageBackend } from "./local-storage-backend";
 import { RemoteBackend } from "./remote-backend";
+import { log } from "./log";
 
 interface StatusPayload {
   backend?: string;
@@ -34,7 +35,7 @@ export async function detectBackend(): Promise<StorageBackend> {
       try {
         return await RemoteBackend.create(sessionId, token);
       } catch (error) {
-        console.error("Could not initialize remote backend:", error);
+        log.error("Could not initialize remote backend:", error);
         throw error;
       }
     }

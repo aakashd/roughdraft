@@ -647,6 +647,10 @@
 }
 
 :root {
+  /* User-adjustable reading column width (document toolbar slider). Consumed by
+     `.document-page-main` as `max-width: min(var(--rd-measure), 100%)`; the
+     persisted value is applied before first paint in `main.tsx`. */
+  --rd-measure: 60rem;
   --background: #fcfcfc;
   --foreground: oklch(0.141 0.006 67.1);
   --card: oklch(1 0 0);

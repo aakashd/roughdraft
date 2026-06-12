@@ -45,6 +45,7 @@ import {
 } from "./components/ui/dialog";
 import { DocumentWorkspace } from "./DocumentWorkspace";
 import { detectBackend } from "./detect-backend";
+import { log } from "./log";
 import {
   getCommentAnchorMeasurements,
   groupCommentAnchorMeasurements,
@@ -1560,7 +1561,7 @@ export function App() {
           window.location.assign(nextUrl.href);
         }
       } catch (error) {
-        console.error("Failed to handle Roughdraft open request:", error);
+        log.error("Failed to handle Roughdraft open request:", error);
       }
     };
 
@@ -1625,7 +1626,7 @@ export function App() {
       } catch (error) {
         if (cancelled) return;
 
-        console.error("Failed to open markdown file:", error);
+        log.error("Failed to open markdown file:", error);
         setActiveDocumentPath(null);
         setLoadError("Could not open that markdown file.");
         setLoading(false);
@@ -1867,7 +1868,7 @@ export function App() {
             applyDocumentPage(nextDocument);
             setDocumentDiskChangeState("clean");
           } catch (error) {
-            console.error("Failed to reload changed markdown file:", error);
+            log.error("Failed to reload changed markdown file:", error);
           }
         })();
       },

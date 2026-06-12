@@ -9,6 +9,7 @@ import {
   MessageSquarePlus,
   PencilLine,
   RefreshCcw,
+  Settings2,
   Upload,
 } from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
@@ -27,6 +28,7 @@ import {
   SelectItemText,
   SelectTrigger,
 } from "./components/ui/select";
+import { Slider } from "./components/ui/slider";
 import { Textarea } from "./components/ui/textarea";
 import {
   Tooltip,
@@ -35,6 +37,14 @@ import {
 } from "./components/ui/tooltip";
 import { criticMarkdownHasReviewRail } from "./critic-markup";
 import { cn } from "./lib/utils";
+import { log } from "./log";
+import {
+  approxCharsPerLine,
+  READING_WIDTH_MAX,
+  READING_WIDTH_MIN,
+  READING_WIDTH_PRESETS,
+  useReadingWidth,
+} from "./reading-width";
 import { toHtml } from "./markdown";
 import {
   type DocumentInteractionMode,
@@ -286,6 +296,9 @@ export function DocumentWorkspace({
   const [reviewHandoffPopoverOpen, setReviewHandoffPopoverOpen] =
     useState(false);
   const [fileCopyMenuOpen, setFileCopyMenuOpen] = useState(false);
+  const [readingWidthMenuOpen, setReadingWidthMenuOpen] = useState(false);
+  const [readingWidth, previewReadingWidth, commitReadingWidth] =
+    useReadingWidth();
   const [copiedFileAction, setCopiedFileAction] =
     useState<FileCopyAction | null>(null);
   const [overallComment, setOverallComment] = useState("");
@@ -419,7 +432,7 @@ export function DocumentWorkspace({
           setReviewHandoffPopoverOpen(true);
         }
       } catch (error) {
-        console.error("Failed to complete review:", error);
+        log.error("Failed to complete review:", error);
         setReviewHandoffState("error");
         setReviewHandoffPopoverOpen(true);
       }
@@ -451,7 +464,7 @@ export function DocumentWorkspace({
         window.setTimeout(() => setCopiedFileAction(null), 1400);
         setFileCopyMenuOpen(false);
       } catch (error) {
-        console.error("Failed to copy document data:", error);
+        log.error("Failed to copy document data:", error);
       }
     },
     [activeDocumentPath, documentFilenameLabel, documentPage],
@@ -713,7 +726,7 @@ export function DocumentWorkspace({
                 "document-page-shell-no-comments min-[1100px]:grid-cols-[minmax(0,1fr)]",
             )}
           >
-            <div className="document-page-main w-full max-w-none min-w-0">
+            <div className="document-page-main mx-auto w-full min-w-0 max-w-[min(var(--rd-measure),100%)]">
               <div className="flex w-full flex-wrap items-center gap-1.5 rounded-[10px] border border-[#E7E2D9] dark:border-slate-700/70 bg-[#FBFAF7]/80 dark:bg-slate-800/40 px-1.5 py-1 shadow-[0_1px_2px_rgba(57,47,38,0.04)]">
                 <Tooltip>
                   <TooltipTrigger
@@ -809,7 +822,89 @@ export function DocumentWorkspace({
                   saveState={saveState}
                   diskChangeState={documentDiskChangeState}
                 />
-                <div className="ml-auto inline-flex h-[1.25rem] shrink-0 items-center">
+                <div className="ml-auto inline-flex h-[1.25rem] shrink-0 items-center gap-1">
+                  <Popover
+                    open={readingWidthMenuOpen}
+                    onOpenChange={setReadingWidthMenuOpen}
+                  >
+                    <PopoverTrigger
+                      render={
+                        <button
+                          type="button"
+                          data-testid="document-reading-width-trigger"
+                          className="inline-flex h-[1.5rem] shrink-0 items-center gap-1 rounded-full border border-[#E0DACF] bg-[#F3EFE8] px-1.5 font-mono text-[0.7rem] leading-none tracking-[0.01em] text-stone-500 outline-none transition hover:bg-[#E8E1D6] hover:text-stone-700 focus-visible:ring-2 focus-visible:ring-stone-300/70 dark:border-slate-700 dark:bg-slate-800 dark:text-stone-300 dark:hover:bg-slate-700 dark:hover:text-stone-100 dark:focus-visible:ring-slate-600/70"
+                          aria-label="Reading width"
+                          title="Reading width"
+                        >
+                          <Settings2
+                            className="size-[0.78rem]"
+                            aria-hidden="true"
+                          />
+                          <span>Width</span>
+                        </button>
+                      }
+                    />
+                    <PopoverContent
+                      aria-label="Reading width"
+                      data-testid="document-reading-width-menu"
+                      className="w-64 p-3"
+                      align="end"
+                    >
+                      <div className="flex flex-col gap-3">
+                        <div className="flex items-baseline justify-between">
+                          <span className="text-[0.72rem] font-medium text-stone-700 dark:text-stone-200">
+                            Reading width
+                          </span>
+                          <span
+                            data-testid="document-reading-width-value"
+                            className="font-mono text-[0.66rem] tabular-nums text-stone-400 dark:text-stone-500"
+                          >
+                            {readingWidth >= READING_WIDTH_MAX
+                              ? "Full width"
+                              : `~${approxCharsPerLine(readingWidth)} chars`}
+                          </span>
+                        </div>
+                        <Slider
+                          min={READING_WIDTH_MIN}
+                          max={READING_WIDTH_MAX}
+                          step={1}
+                          value={readingWidth}
+                          onValueChange={(value) => {
+                            previewReadingWidth(
+                              Array.isArray(value) ? value[0] : value,
+                            );
+                          }}
+                          onValueCommitted={(value) => {
+                            commitReadingWidth(
+                              Array.isArray(value) ? value[0] : value,
+                            );
+                          }}
+                          aria-label="Reading column width"
+                        />
+                        <div className="flex flex-wrap gap-1">
+                          {READING_WIDTH_PRESETS.map((preset) => {
+                            const active = readingWidth === preset.rem;
+                            return (
+                              <button
+                                key={preset.label}
+                                type="button"
+                                data-testid={`document-reading-width-preset-${preset.label.toLowerCase()}`}
+                                onClick={() => commitReadingWidth(preset.rem)}
+                                className={cn(
+                                  "rounded-full px-2 py-0.5 text-[0.66rem] font-medium outline-none transition focus-visible:ring-2 focus-visible:ring-stone-300/70 dark:focus-visible:ring-slate-600/70",
+                                  active
+                                    ? "bg-stone-700 text-white dark:bg-slate-500 dark:text-white"
+                                    : "bg-[#EEE9E1] text-stone-600 hover:bg-[#E4DDD2] dark:bg-slate-800 dark:text-stone-300 dark:hover:bg-slate-700",
+                                )}
+                              >
+                                {preset.label}
+                              </button>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    </PopoverContent>
+                  </Popover>
                   <Select<DocumentInteractionMode>
                     value={documentInteractionMode}
                     onValueChange={(value) => {
