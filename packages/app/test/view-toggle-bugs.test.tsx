@@ -10,6 +10,7 @@ import {
   DocumentSaveStatusIndicator,
   DocumentWorkspace,
   isReviewHandoffDisabled,
+  shouldShowReviewHandoffButton,
 } from "../src/DocumentWorkspace";
 import type { DocumentSaveState } from "../src/PageCard";
 import type {
@@ -288,11 +289,13 @@ describe("saving/saved status indicator (issue 2 fix)", () => {
     documentDiskChangeState = "clean",
     documentContent = "Hello world",
     watcherCount = 0,
+    reviewHandoffEnabled = true,
     onSaveDocument = async () => {},
   }: {
     documentDiskChangeState?: "clean" | "changed" | "conflict" | "paused";
     documentContent?: string;
     watcherCount?: number;
+    reviewHandoffEnabled?: boolean;
     onSaveDocument?: (id: string, content: string) => Promise<void>;
   } = {}) {
     (
@@ -317,6 +320,7 @@ describe("saving/saved status indicator (issue 2 fix)", () => {
           onKeepEditingWithoutAutosave={() => {}}
           onOverwriteDocumentOnDisk={() => {}}
           onCompleteReview={async () => ({ delivered: false })}
+          reviewHandoffEnabled={reviewHandoffEnabled}
           backend={createBackend({ watcherCount })}
         />,
       );
@@ -362,7 +366,7 @@ describe("saving/saved status indicator (issue 2 fix)", () => {
   });
 
   it("renders save status next to the filename when handoff exists", async () => {
-    await renderWorkspace({ watcherCount: 1 });
+    await renderWorkspace({ reviewHandoffEnabled: true });
 
     const stack = queryByTestId(container, "document-status-stack");
     const header = getByTestId(container, "document-page-header");
@@ -383,7 +387,7 @@ describe("saving/saved status indicator (issue 2 fix)", () => {
   });
 
   it("renders save status next to the filename without handoff", async () => {
-    await renderWorkspace();
+    await renderWorkspace({ reviewHandoffEnabled: false });
 
     const stack = queryByTestId(container, "document-status-stack");
     const header = getByTestId(container, "document-page-header");
@@ -547,6 +551,39 @@ describe("saving/saved status indicator (issue 2 fix)", () => {
   });
 });
 
+describe("review handoff button visibility is decoupled from watcher count", () => {
+  // The "I'm done" handoff button must show whenever a real review document is
+  // open, regardless of whether a `roughdraft watch` long-poll is currently
+  // parked. The server persists the handoff to disk independent of any watcher,
+  // so gating on the polled watcher count made the button blink/disappear.
+  it("shows the button for a real open document even with no watcher connected", () => {
+    expect(
+      shouldShowReviewHandoffButton({
+        reviewHandoffEnabled: true,
+        activeDocumentPath: "/abs/path/to/doc.md",
+      }),
+    ).toBe(true);
+  });
+
+  it("hides the button for the homepage preview (handoff not enabled)", () => {
+    expect(
+      shouldShowReviewHandoffButton({
+        reviewHandoffEnabled: false,
+        activeDocumentPath: "preview.md",
+      }),
+    ).toBe(false);
+  });
+
+  it("hides the button when no document is open", () => {
+    expect(
+      shouldShowReviewHandoffButton({
+        reviewHandoffEnabled: true,
+        activeDocumentPath: null,
+      }),
+    ).toBe(false);
+  });
+});
+
 describe("interaction mode preserved across view toggle (issue 3 fix)", () => {
   let container: HTMLDivElement;
   let root: Root;
@@ -664,6 +701,7 @@ describe("review handoff watcher affordance", () => {
           onKeepEditingWithoutAutosave={() => {}}
           onOverwriteDocumentOnDisk={() => {}}
           onCompleteReview={onCompleteReview}
+          reviewHandoffEnabled
           backend={createBackend({ watcherCount: getWatcherCount() })}
         />,
       );
@@ -671,20 +709,31 @@ describe("review handoff watcher affordance", () => {
     });
   }
 
-  it("hides the done reviewing button when no agent is watching", async () => {
+  it("shows the done reviewing button even when no agent is watching", async () => {
     const onCompleteReview = vi
       .fn<() => Promise<CompleteReviewResult>>()
       .mockResolvedValue({ delivered: false });
 
     await renderWorkspace({ getWatcherCount: () => 0, onCompleteReview });
 
-    expect(container.textContent).not.toContain("I'm done");
-    expect(container.textContent).not.toContain("Review ready");
-    expect(container.textContent).not.toContain("Copy prompt");
-    expect(onCompleteReview).not.toHaveBeenCalled();
+    const doneReviewingButton = queryByTestId<HTMLButtonElement>(
+      container,
+      "review-handoff-button",
+    );
+    expect(doneReviewingButton).not.toBeNull();
+    expect(container.textContent).toContain("I'm done");
+
+    if (!doneReviewingButton) {
+      throw new Error("I'm done button not found");
+    }
+    // With no watcher the handoff still persists to the document on disk; the
+    // server reports it as undelivered, which surfaces as "Not sent".
+    await click(doneReviewingButton);
+    expect(onCompleteReview).toHaveBeenCalledOnce();
+    expect(container.textContent).toContain("Not sent");
   });
 
-  it("shows the done reviewing button only for an active watcher", async () => {
+  it("delivers the handoff and shows Sent when an agent is watching", async () => {
     const onCompleteReview = vi
       .fn<() => Promise<CompleteReviewResult>>()
       .mockResolvedValue({ delivered: true });

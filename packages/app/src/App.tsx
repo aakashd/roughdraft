@@ -1953,6 +1953,7 @@ export function App() {
         onKeepEditingWithoutAutosave={handleKeepEditingWithoutAutosave}
         onOverwriteDocumentOnDisk={handleOverwriteDocumentOnDisk}
         onCompleteReview={handleCompleteReview}
+        reviewHandoffEnabled
         backend={backend}
       />
     </main>

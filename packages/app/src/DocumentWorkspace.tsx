@@ -248,6 +248,24 @@ export function isReviewHandoffDisabled({
   );
 }
 
+// The handoff button's visibility is deliberately NOT gated on whether an agent
+// is currently watching. A watcher is an ephemeral long-poll waiter that the
+// server registers and drops every poll window, so gating on it made the button
+// flicker and disappear between windows (and vanish entirely whenever no agent
+// happened to be watching). The server persists the handoff to the document on
+// disk regardless of any live watcher, so the button is useful whenever a real
+// review document is open; delivery to a connected agent is a separate, best-
+// effort step reflected in `reviewHandoffState`.
+export function shouldShowReviewHandoffButton({
+  reviewHandoffEnabled,
+  activeDocumentPath,
+}: {
+  reviewHandoffEnabled: boolean;
+  activeDocumentPath: string | null;
+}): boolean {
+  return reviewHandoffEnabled && !!activeDocumentPath;
+}
+
 interface DocumentWorkspaceProps {
   documentPage: Page | null;
   activeDocumentPath: string | null;
@@ -266,6 +284,10 @@ interface DocumentWorkspaceProps {
   onCompleteReview: (
     options?: CompleteReviewOptions,
   ) => Promise<{ delivered: boolean }>;
+  // Whether this workspace can hand a review off to an agent. True for the real
+  // document workspace; false (default) for surfaces like the homepage preview,
+  // which should never show the "I'm done" button.
+  reviewHandoffEnabled?: boolean;
   backend: StorageBackend | null;
 }
 
@@ -285,6 +307,7 @@ export function DocumentWorkspace({
   onKeepEditingWithoutAutosave,
   onOverwriteDocumentOnDisk,
   onCompleteReview,
+  reviewHandoffEnabled = false,
   backend,
 }: DocumentWorkspaceProps) {
   const [documentInteractionMode, setDocumentInteractionMode] =
@@ -483,9 +506,10 @@ export function DocumentWorkspace({
     documentDiskChangeState === "clean"
       ? null
       : conflictNoticeCopy[documentDiskChangeState];
-  const showReviewHandoffButton =
-    !!activeDocumentPath &&
-    (reviewWatcherCount > 0 || reviewHandoffState !== "idle");
+  const showReviewHandoffButton = shouldShowReviewHandoffButton({
+    reviewHandoffEnabled,
+    activeDocumentPath,
+  });
   const reviewHandoffButtonLabel =
     reviewHandoffState === "notifying"
       ? "Sending"
