@@ -12,6 +12,7 @@ sandbox
 .conductor/
 .claude/
 .agents/
+.context/
 .mcp.json
 .roughdraft-state
 /roughdraft.json
